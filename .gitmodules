@@ -10,3 +10,7 @@
 	path = workspace/cartesian_controllers
 	url = https://github.com/fzi-forschungszentrum-informatik/cartesian_controllers.git
 	branch = ros2
+[submodule "workspace/Universal_Robots_ROS2_Description"]
+	path = workspace/Universal_Robots_ROS2_Description
+	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git
+	branch = humble
