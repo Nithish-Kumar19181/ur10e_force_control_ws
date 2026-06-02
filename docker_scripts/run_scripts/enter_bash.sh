@@ -14,8 +14,8 @@ if [ -z "$(docker ps -q -f name="^${CONTAINER}$")" ]; then
     --network host \
     -e DISPLAY="${DISPLAY}" \
     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-    -v "${REPO_ROOT}/workspace:/workspace" \
+    -v "${REPO_ROOT}/workspace:/ur10e_ws/src" \
     "${IMAGE}"
 fi
 
-docker exec -it "${CONTAINER}" bash
+docker exec -it -w /ur10e_ws "${CONTAINER}" bash

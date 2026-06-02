@@ -1,71 +1,86 @@
-FROM osrf/ros:humble-desktop-full
+ARG ROS_DISTRO=humble
+
+# Use base image
+FROM ros:$ROS_DISTRO-ros-base
+
+# Re-declare after FROM so $ROS_DISTRO is available in subsequent instructions
+ARG ROS_DISTRO
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 # ── System utilities ──────────────────────────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    wget \
-    curl \
+RUN apt-get update && apt-get install -y \
+    nano \
     vim \
-    sudo \
+    curl \
+    wget \
+    git \
+    tmux \
+    xterm \
+    gnupg2 \
+    lsb-release \
+    software-properties-common \
+    python3-pip \
+    python3-rosdep \
+    python3-colcon-common-extensions \
+    python3-vcstool \
+    python3-pyqt5 \
     x11-apps \
     mesa-utils \
     libgl1-mesa-glx \
     libgl1-mesa-dri \
-    python3-pip \
-    python3-colcon-common-extensions \
-    python3-rosdep \
-    python3-vcstool \
-    python3-pyqt5 \
     && rm -rf /var/lib/apt/lists/*
 
 # ── ROS2 packages ─────────────────────────────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Universal Robots driver + controllers
-    ros-humble-ur-robot-driver \
-    ros-humble-ur-controllers \
-    ros-humble-ur-moveit-config \
-    ros-humble-ur-description \
-    # MoveIt2
-    ros-humble-moveit \
-    # Gazebo Classic (11) + ROS2 bridge
-    ros-humble-gazebo-ros-pkgs \
-    ros-humble-gazebo-ros2-control \
-    # Ignition/GZ Fortress + ROS2 bridge
-    ros-humble-ros-gz \
-    ros-humble-ros-gz-bridge \
-    ros-humble-ros-gz-sim \
-    ros-humble-ign-ros2-control \
-    # ros2_control stack
-    ros-humble-ros2-control \
-    ros-humble-ros2-controllers \
-    ros-humble-controller-manager \
-    # Cartesian controller build dependencies
-    ros-humble-eigen-stl-containers \
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    ros-$ROS_DISTRO-rviz2 \
+    ros-$ROS_DISTRO-ur-robot-driver \
+    ros-$ROS_DISTRO-ur-controllers \
+    ros-$ROS_DISTRO-ur-moveit-config \
+    ros-$ROS_DISTRO-ur-description \
+    ros-$ROS_DISTRO-moveit \
+    ros-$ROS_DISTRO-gazebo-ros-pkgs \
+    ros-$ROS_DISTRO-gazebo-ros2-control \
+    ros-$ROS_DISTRO-ros-gz \
+    ros-$ROS_DISTRO-ros-gz-bridge \
+    ros-$ROS_DISTRO-ros-gz-sim \
+    ros-$ROS_DISTRO-ign-ros2-control \
+    ros-$ROS_DISTRO-ros2-control \
+    ros-$ROS_DISTRO-ros2-controllers \
+    ros-$ROS_DISTRO-controller-manager \
+    ros-$ROS_DISTRO-eigen-stl-containers \
     libeigen3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Non-root user (matches host UID/GID to avoid permission issues) ───────────
-ARG USERNAME=ros
-ARG USER_UID=1000
-ARG USER_GID=${USER_UID}
+# ── Workspace ─────────────────────────────────────────────────────────────────
+ENV WORKSPACE_DIR=/ur10e_ws
+RUN mkdir -p $WORKSPACE_DIR/src
 
-RUN groupadd --gid ${USER_GID} ${USERNAME} \
-    && useradd --uid ${USER_UID} --gid ${USER_GID} -m -s /bin/bash ${USERNAME} \
-    && mkdir -p /home/${USERNAME}/.config \
-    && chown ${USER_UID}:${USER_GID} /home/${USERNAME}/.config \
-    && echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
-    && chmod 0440 /etc/sudoers.d/${USERNAME}
+WORKDIR $WORKSPACE_DIR
 
-# ── Workspace mount point ─────────────────────────────────────────────────────
-RUN mkdir -p /workspace && chown ${USER_UID}:${USER_GID} /workspace
+# Initialize rosdep
+RUN rosdep init || true \
+    && rosdep update --rosdistro $ROS_DISTRO
 
-WORKDIR /workspace
+ENV ROS_DOMAIN_ID=0
 
-# ── Shell setup for ros user ──────────────────────────────────────────────────
-USER ${USERNAME}
+# Copy workspace source into image (submodules must be initialized before docker build)
+COPY workspace/ $WORKSPACE_DIR/src/
 
-RUN echo "source /opt/ros/humble/setup.bash" >> /home/${USERNAME}/.bashrc \
-    && echo '[ -f /workspace/install/setup.bash ] && source /workspace/install/setup.bash' >> /home/${USERNAME}/.bashrc \
-    && echo "export ROS_DOMAIN_ID=0" >> /home/${USERNAME}/.bashrc
+# Install ROS dependencies declared in package.xml files
+RUN apt-get update \
+    && rosdep install --from-paths $WORKSPACE_DIR/src --ignore-src -r -y \
+    && rm -rf /var/lib/apt/lists/*
 
-CMD ["/bin/bash"]
+# Build workspace — skip test and simulation stubs from cartesian_controllers
+RUN bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && \
+    colcon build --symlink-install \
+      --packages-skip cartesian_controller_simulation cartesian_controller_tests \
+      --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+# Source ROS and workspace on every shell
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc \
+    && echo "source $WORKSPACE_DIR/install/setup.bash" >> /root/.bashrc \
+    && echo "export ROS_DOMAIN_ID=0" >> /root/.bashrc
+
+CMD ["bash"]

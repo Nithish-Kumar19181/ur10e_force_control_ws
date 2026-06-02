@@ -14,3 +14,7 @@
 	path = workspace/Universal_Robots_ROS2_Description
 	url = https://github.com/Nithish-Kumar19181/Universal_Robots_ROS2_Description.git
 	branch = humble
+[submodule "workspace/Universal_Robots_ROS2_Driver"]
+	path = workspace/Universal_Robots_ROS2_Driver
+	url = https://github.com/Nithish-Kumar19181/Universal_Robots_ROS2_Driver.git
+	branch = humble
