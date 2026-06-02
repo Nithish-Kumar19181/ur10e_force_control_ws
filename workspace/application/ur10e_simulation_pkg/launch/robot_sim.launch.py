@@ -169,6 +169,15 @@ def generate_launch_description():
         actions=[marker_array_node]
     )
 
+    rviz_node = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        arguments=["-d", os.path.join(ur10e_pkg_share, "rviz", "rviz_config.rviz")],
+        parameters=[{"use_sim_time": True}],
+        output="log",
+    )
+
     # for ign gazebo bridge for force torque sensor
     # force_torque_bridge = Node(
     #     package="ros_gz_bridge",
@@ -182,6 +191,7 @@ def generate_launch_description():
     return LaunchDescription([
         disable_online_model_db,    # must precede gazebo launch
         ur_sim_moveit,
+        rviz_node,
         delayed_cartesian_start,
         delayed_marker_node,
         spawn_bowl,
