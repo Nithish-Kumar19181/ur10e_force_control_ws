@@ -1,7 +1,12 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, ExecuteProcess, TimerAction
+from launch.actions import (
+    IncludeLaunchDescription,
+    ExecuteProcess,
+    TimerAction,
+    SetEnvironmentVariable,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -11,6 +16,15 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     ur10e_pkg_share = get_package_share_directory("ur10e_simulation_pkg")
+
+    # Gazebo Classic otherwise blocks for ~2.5 min trying to fetch sun/ground_plane
+    # from the dead http://models.gazebosim.org/ database before it loads the robot
+    # model (and its gazebo_ros2_control plugin, i.e. the controller_manager).
+    # Both models are cached locally, so disabling the online DB is safe and makes
+    # the controller_manager come up promptly.
+    disable_online_model_db = SetEnvironmentVariable(
+        "GAZEBO_MODEL_DATABASE_URI", ""
+    )
 
     bowl_sdf_template = os.path.join(ur10e_pkg_share, "model", "bowl.sdf")
     bowl_sdf_spawn = "/tmp/bowl_spawn.sdf"
@@ -42,12 +56,18 @@ def generate_launch_description():
         }.items()
     )
 
+    # --controller-manager-timeout lets these wait for the gazebo_ros2_control
+    # controller_manager to spawn (Gazebo Classic takes ~60 s to load it) instead
+    # of giving up after the default ~10 s.
+    cm_timeout = ["--controller-manager-timeout", "300"]
+
     spawn_cartesian_motion = ExecuteProcess(
         cmd=[
             "ros2", "run", "controller_manager", "spawner",
             "cartesian_motion_controller",
             "--inactive",
-            "--controller-manager", "/controller_manager"
+            "--controller-manager", "/controller_manager",
+            *cm_timeout
         ],
         output="screen"
     )
@@ -57,7 +77,8 @@ def generate_launch_description():
             "ros2", "run", "controller_manager", "spawner",
             "cartesian_force_controller",
             "--inactive",
-            "--controller-manager", "/controller_manager"
+            "--controller-manager", "/controller_manager",
+            *cm_timeout
         ],
         output="screen"
     )
@@ -67,7 +88,8 @@ def generate_launch_description():
             "ros2", "run", "controller_manager", "spawner",
             "cartesian_compliance_controller",
             "--inactive",
-            "--controller-manager", "/controller_manager"
+            "--controller-manager", "/controller_manager",
+            *cm_timeout
         ],
         output="screen"
     )
@@ -158,6 +180,7 @@ def generate_launch_description():
     # )
 
     return LaunchDescription([
+        disable_online_model_db,    # must precede gazebo launch
         ur_sim_moveit,
         delayed_cartesian_start,
         delayed_marker_node,
