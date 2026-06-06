@@ -1,60 +1,33 @@
 circle_follow_node:
   ros__parameters:
 
-    # ---- Hardware / Environment ----
-    z_direction:               1.0     # +1 sim (Z up), -1 real hardware (Z down into vessel)
-    vessel_height:             0.85    # m — total usable cleaning height
-    vessel_inner_radius_min:   0.20    # m — hard lower clamp on PI-controlled radius
-    vessel_inner_radius_max:   0.60    # m — hard upper clamp on PI-controlled radius
-
-    # ---- Layer Progression ----
-    blade_width:               0.03    # m — scraper blade contact width
-    layer_overlap_fraction:    0.90    # 0–1 — layer_step = blade_width * this
-    start_z_offset:            0.00    # m — offset added to FK home Z to place layer 0
-    resume_layer:              0       # int — layer index to start from (0 = fresh start)
+    # ---- Retract Phase ----
+    retract_duration:        2.0      # s — back-off S-curve time
+    retract_distance:        0.10     # m — radial inward travel
+    move_up_distance:        0.10     # m — vertical lift during retract
 
     # ---- Approach Phase ----
-    approach_distance:         0.35    # m — radial travel toward wall
-    approach_duration:         7.0     # s — S-curve approach time
-    approach_timeout:          20.0    # s — abort APPROACH if no contact within this time
+    approach_distance:       0.35     # m — radial travel toward wall
+    approach_duration:       7.0      # s — S-curve approach time
 
     # ---- Circle Phase ----
-    angular_speed:             0.25    # rad/s — nominal angular velocity
-    max_angle_rad:             6.2832  # rad — arc per layer (6.2832 = one full circle)
-    contact_force_threshold:   2.0     # N — |Fz| to declare contact during APPROACH
-    desired_circle_force:     -10.0    # N — target contact force (negative = into wall in sim)
-    circle_ramp_fraction:      0.15    # fraction of total arc time used for speed ramp
-
-    # ---- Force Spike Handling ----
-    high_force_threshold:      15.0    # N — |Fz| above which omega begins scaling down
-    max_force_clamp:           25.0    # N — |Fz| at which omega reaches min_speed_fraction
-    min_speed_fraction:        0.15    # 0–1 — floor on angular speed during spike
+    angular_speed:           0.35      # rad/s — nominal angular velocity
+    contact_force_threshold: 2.0      # N — |Fz| to declare contact during APPROACH
+    desired_circle_force:   -10.0     # N — target contact force
+    max_angle_rad:           6.2832   # rad — arc per circle (2π = one full 360°)
+    circle_ramp_fraction:    0.10     # fraction of the arc used for each speed ramp
+    min_speed_fraction:      0.15     # speed floor so the ramp-down completes the arc
 
     # ---- Force PI Controller (radius adaptation) ----
-    kp_radius:                 0.5     # m/(N·s) — proportional gain
-    ki_radius:                 0.005   # m/N     — integral gain
-    integral_limit:            2.0     # N·s     — anti-windup clamp
-    max_radius_rate:           0.01    # m/s     — max allowed radius change per second
+    kp_radius:               0.5      # m/(N·s) — proportional gain
+    ki_radius:               0.005    # m/N     — integral gain
+    integral_limit:          2.0      # N·s     — anti-windup clamp
+    max_radius_rate:         0.01     # m/s     — max radius change per second
 
     # ---- Target Wrench ----
-    approach_force_z:         -5.0     # N — Fz setpoint during APPROACH
-    circle_force_z:           -3.0     # N — Fz setpoint during CIRCLE
+    approach_force_z:       -5.0      # N — Fz setpoint during APPROACH
+    circle_force_z:         -3.0      # N — constant compliance Fz bias during CIRCLE
 
-    # ---- Layer Transition (Retract + Z Step) ----
-    retract_distance:          0.15    # m — radial inward travel after each circle
-    retract_duration:          3.0     # s — retract S-curve time
-    z_step_duration:           2.0     # s — Z transition S-curve time
-
-    # ---- Final Retract + Safe Z Move ----
-    final_retract_distance:    0.30    # m — full radial retract after last layer
-    final_retract_duration:    4.0     # s
-    safe_z_height:             0.20    # m — absolute Z to move to before homing
-    safe_z_duration:           3.0     # s
-
-    # ---- Home Joint Angles (radians) ----
-    home_joint_shoulder_pan:   0.40960574676343686
-    home_joint_shoulder_lift: -1.6747645009139471
-    home_joint_elbow:         -2.401686248302344
-    home_joint_wrist_1:        0.9661313426465519
-    home_joint_wrist_2:        1.1646508483476774
-    home_joint_wrist_3:       -3.1578720449159454
+    # ---- Multi-Layer Loop ----
+    num_layers:              9        # how many RETRACT→ROTATE→APPROACH→CIRCLE layers
+                                      # each layer rises move_up_distance above the previous

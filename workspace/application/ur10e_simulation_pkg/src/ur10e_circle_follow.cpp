@@ -1,9 +1,16 @@
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/string.hpp>
+
+#include <controller_manager_msgs/srv/switch_controller.hpp>
+#include <control_msgs/action/follow_joint_trajectory.hpp>
+#include <trajectory_msgs/msg/joint_trajectory.hpp>
+
+#include <moveit/move_group_interface/move_group_interface.h>
 
 #include <urdf/model.h>
 #include <kdl/tree.hpp>
@@ -11,12 +18,13 @@
 #include <kdl_parser/kdl_parser.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
 
-#include <moveit/move_group_interface/move_group_interface.h>
-
 #include <memory>
-#include <algorithm>
-#include <atomic>
 #include <thread>
+#include <atomic>
+#include <vector>
+#include <map>
+#include <string>
+#include <algorithm>
 #include <cmath>
 
 using namespace std::chrono_literals;
@@ -25,47 +33,10 @@ using std::placeholders::_1;
 class CircleForce : public rclcpp::Node
 {
 public:
-  CircleForce() : Node("circle_follow_node")
+  CircleForce()
+  : Node("retract_rotate_approach_circle")
   {
-    // Declare all parameters (YAML overrides these defaults)
-    declare_parameter("z_direction",              1.0);
-    declare_parameter("vessel_height",            0.85);
-    declare_parameter("vessel_inner_radius_min",  0.20);
-    declare_parameter("vessel_inner_radius_max",  0.60);
-    declare_parameter("blade_width",              0.03);
-    declare_parameter("layer_overlap_fraction",   0.90);
-    declare_parameter("start_z_offset",           0.00);
-    declare_parameter("resume_layer",             0);
-    declare_parameter("approach_distance",        0.35);
-    declare_parameter("approach_duration",        7.0);
-    declare_parameter("approach_timeout",         20.0);
-    declare_parameter("angular_speed",            0.25);
-    declare_parameter("max_angle_rad",            6.2832);
-    declare_parameter("contact_force_threshold",  2.0);
-    declare_parameter("desired_circle_force",    -10.0);
-    declare_parameter("circle_ramp_fraction",     0.15);
-    declare_parameter("high_force_threshold",     15.0);
-    declare_parameter("max_force_clamp",          25.0);
-    declare_parameter("min_speed_fraction",       0.15);
-    declare_parameter("kp_radius",                0.5);
-    declare_parameter("ki_radius",                0.005);
-    declare_parameter("integral_limit",           2.0);
-    declare_parameter("max_radius_rate",          0.01);
-    declare_parameter("approach_force_z",        -5.0);
-    declare_parameter("circle_force_z",          -3.0);
-    declare_parameter("retract_distance",         0.15);
-    declare_parameter("retract_duration",         3.0);
-    declare_parameter("z_step_duration",          2.0);
-    declare_parameter("final_retract_distance",   0.30);
-    declare_parameter("final_retract_duration",   4.0);
-    declare_parameter("safe_z_height",            0.20);
-    declare_parameter("safe_z_duration",          3.0);
-    declare_parameter("home_joint_shoulder_pan",   0.40960574676343686);
-    declare_parameter("home_joint_shoulder_lift", -1.6747645009139471);
-    declare_parameter("home_joint_elbow",         -2.401686248302344);
-    declare_parameter("home_joint_wrist_1",        0.9661313426465519);
-    declare_parameter("home_joint_wrist_2",        1.1646508483476774);
-    declare_parameter("home_joint_wrist_3",       -3.1578720449159454);
+    loadParams();
 
     joint_sub_ = create_subscription<sensor_msgs::msg::JointState>(
       "/joint_states", rclcpp::SensorDataQoS(),
@@ -86,25 +57,67 @@ public:
     target_wrench_pub_ = create_publisher<geometry_msgs::msg::WrenchStamped>(
       "/cartesian_compliance_controller/target_wrench", 10);
 
-    timer_ = create_wall_timer(20ms, std::bind(&CircleForce::update, this));
+    timer_ = create_wall_timer(
+      20ms, std::bind(&CircleForce::update, this));
 
-    RCLCPP_INFO(get_logger(), "CircleForce node started — waiting for sensors");
+    RCLCPP_INFO(get_logger(),
+      "Looping %d layers: Retract → Rotate(MoveIt/JTC) → Approach → Circle "
+      "(alternating direction) → STOP", num_layers_);
+  }
+
+  ~CircleForce() override
+  {
+    if (rotate_thread_.joinable())
+      rotate_thread_.join();
   }
 
 private:
-  enum class Mode {
-    IDLE, APPROACH, CIRCLE,
-    RADIAL_RETRACT, Z_STEP,
-    FINAL_RETRACT, SAFE_Z_MOVE,
-    HOMING, DONE
-  };
+  enum class Mode { RETRACT, ROTATE, APPROACH, CIRCLE, STOP };
+  Mode mode_{Mode::RETRACT};   // only ever mutated from the main (executor) thread
 
-  // ── Callbacks ─────────────────────────────────────────────────────────────
+  using FollowJointTrajectory = control_msgs::action::FollowJointTrajectory;
+
+  // Loads every tunable from the params file. Declared with a bare type (no
+  // default), so the node throws at construction if any param is missing —
+  // the YAML is required.
+  void loadParams()
+  {
+    auto req = [this](const std::string & name) -> double
+    {
+      declare_parameter(name, rclcpp::PARAMETER_DOUBLE);
+      return get_parameter(name).as_double();
+    };
+
+    retract_duration_        = req("retract_duration");
+    retract_distance_        = req("retract_distance");
+    move_up_distance_        = req("move_up_distance");
+
+    approach_distance_       = req("approach_distance");
+    approach_duration_       = req("approach_duration");
+
+    angular_speed_           = req("angular_speed");
+    contact_force_threshold_ = req("contact_force_threshold");
+    desired_circle_force_    = req("desired_circle_force");
+
+    kp_radius_               = req("kp_radius");
+    ki_radius_               = req("ki_radius");
+    integral_limit_          = req("integral_limit");
+    max_radius_rate_         = req("max_radius_rate");
+    max_angle_rad_           = req("max_angle_rad");
+    circle_ramp_fraction_    = req("circle_ramp_fraction");
+    min_speed_fraction_      = req("min_speed_fraction");
+
+    approach_force_z_        = req("approach_force_z");
+    circle_force_z_          = req("circle_force_z");
+
+    declare_parameter("num_layers", rclcpp::PARAMETER_INTEGER);
+    num_layers_ = static_cast<int>(get_parameter("num_layers").as_int());
+  }
 
   void jointCb(const sensor_msgs::msg::JointState::SharedPtr msg)
   {
     joint_state_ = *msg;
-    got_joints_  = true;
+    got_joints_ = true;
   }
 
   void robotDescCb(const std_msgs::msg::String::SharedPtr msg)
@@ -115,30 +128,26 @@ private:
 
   void ftCb(const geometry_msgs::msg::WrenchStamped::SharedPtr msg)
   {
-    got_ft_      = true;
+    got_ft_ = true;
     measured_fz_ = msg->wrench.force.z;
 
     if (mode_ == Mode::APPROACH &&
         std::abs(measured_fz_) > contact_force_threshold_)
     {
-      radius_         = std::hypot(current_x_, current_y_);
-      theta_          = std::atan2(current_y_, current_x_);
+      radius_ = std::hypot(current_x_, current_y_);
+      theta_ = std::atan2(current_y_, current_x_);
       traveled_angle_ = 0.0;
       force_integral_ = 0.0;
 
       circle_start_time_ = now();
-      last_update_time_  = now();
+      last_update_time_ = now();
+
       mode_ = Mode::CIRCLE;
 
       RCLCPP_WARN(get_logger(),
-        "Contact! Layer %d/%d [%s] | R=%.4f  Z=%.4f",
-        current_layer_ + 1, total_layers_,
-        circle_direction_cw_ ? "CW" : "CCW",
-        radius_, current_layer_z_);
+        "Contact detected → CIRCLE | Radius = %.4f", radius_);
     }
   }
-
-  // ── Main loop (50 Hz) ─────────────────────────────────────────────────────
 
   void update()
   {
@@ -152,11 +161,37 @@ private:
       kdl_ready_ = true;
     }
 
+    // While ROTATE is in flight the joint_trajectory_controller / MoveIt owns the
+    // arm, so we must NOT stream Cartesian targets to the (now inactive)
+    // compliance controller. The rotate runs on a worker thread; we only
+    // finalise the transition here, on the main thread.
+    if (mode_ == Mode::ROTATE)
+    {
+      if (rotate_done_)
+      {
+        if (rotate_thread_.joinable())
+          rotate_thread_.join();
+
+        if (!rotate_ok_)
+        {
+          RCLCPP_ERROR(get_logger(), "Rotate failed → STOP");
+          mode_ = Mode::STOP;
+        }
+        else
+        {
+          // The flip changed the tool orientation (and re-affirms position);
+          // re-read FK so APPROACH streams from the new pose without a jump.
+          refreshPoseAfterRotate();
+          approach_start_time_ = now();
+          mode_ = Mode::APPROACH;
+        }
+      }
+      return;
+    }
+
     publishTargetPose();
     publishTargetWrench();
   }
-
-  // ── KDL initialisation ────────────────────────────────────────────────────
 
   void initKDL()
   {
@@ -167,514 +202,476 @@ private:
     kdl_parser::treeFromUrdfModel(model, tree);
     tree.getChain("base_link", "tool0", chain_);
 
-    fk_solver_ = std::make_unique<KDL::ChainFkSolverPos_recursive>(chain_);
+    fk_solver_ =
+      std::make_unique<KDL::ChainFkSolverPos_recursive>(chain_);
     joints_.resize(chain_.getNrOfJoints());
   }
 
+  // First-time setup for layer 1 — identical to a per-layer capture.
   void readStartPose()
   {
-    // Load all parameters into member variables
-    z_direction_             = get_parameter("z_direction").as_double();
-    vessel_height_           = get_parameter("vessel_height").as_double();
-    vessel_r_min_            = get_parameter("vessel_inner_radius_min").as_double();
-    vessel_r_max_            = get_parameter("vessel_inner_radius_max").as_double();
-    blade_width_             = get_parameter("blade_width").as_double();
-    layer_overlap_fraction_  = get_parameter("layer_overlap_fraction").as_double();
-    start_z_offset_          = get_parameter("start_z_offset").as_double();
-    approach_distance_       = get_parameter("approach_distance").as_double();
-    approach_duration_       = get_parameter("approach_duration").as_double();
-    approach_timeout_        = get_parameter("approach_timeout").as_double();
-    angular_speed_           = get_parameter("angular_speed").as_double();
-    max_angle_rad_           = get_parameter("max_angle_rad").as_double();
-    contact_force_threshold_ = get_parameter("contact_force_threshold").as_double();
-    desired_circle_force_    = get_parameter("desired_circle_force").as_double();
-    circle_ramp_fraction_    = get_parameter("circle_ramp_fraction").as_double();
-    high_force_threshold_    = get_parameter("high_force_threshold").as_double();
-    max_force_clamp_         = get_parameter("max_force_clamp").as_double();
-    min_speed_fraction_      = get_parameter("min_speed_fraction").as_double();
-    kp_radius_               = get_parameter("kp_radius").as_double();
-    ki_radius_               = get_parameter("ki_radius").as_double();
-    integral_limit_          = get_parameter("integral_limit").as_double();
-    max_radius_rate_         = get_parameter("max_radius_rate").as_double();
-    approach_force_z_        = get_parameter("approach_force_z").as_double();
-    circle_force_z_          = get_parameter("circle_force_z").as_double();
-    retract_distance_        = get_parameter("retract_distance").as_double();
-    retract_duration_        = get_parameter("retract_duration").as_double();
-    z_step_duration_         = get_parameter("z_step_duration").as_double();
-    final_retract_distance_  = get_parameter("final_retract_distance").as_double();
-    final_retract_duration_  = get_parameter("final_retract_duration").as_double();
-    safe_z_height_           = get_parameter("safe_z_height").as_double();
-    safe_z_duration_         = get_parameter("safe_z_duration").as_double();
+    captureLayerStartPose();
+  }
 
-    // FK home pose
+  // Re-read the live FK pose into the start_/dir_ fields and reset the retract
+  // clock. Used at the start of every layer (layer 1 via readStartPose, layers
+  // 2..N via startNextLayer) so RETRACT operates from wherever the arm now is.
+  void captureLayerStartPose()
+  {
     for (size_t i = 0; i < 6; ++i)
       joints_(i) = joint_state_.position[i];
 
     KDL::Frame frame;
     fk_solver_->JntToCart(joints_, frame);
 
-    double fk_x = frame.p.x();
-    double fk_y = frame.p.y();
-    double fk_z = frame.p.z();
+    start_x_ = frame.p.x();
+    start_y_ = frame.p.y();
+    start_z_ = frame.p.z();
+
+    current_x_ = start_x_;
+    current_y_ = start_y_;
+
     frame.M.GetQuaternion(qx_, qy_, qz_, qw_);
 
-    current_x_ = fk_x;
-    current_y_ = fk_y;
+    double n = std::hypot(start_x_, start_y_);
+    dir_x_ = -start_x_ / n;
+    dir_y_ = -start_y_ / n;
 
-    // Layer geometry
-    layer_step_z_  = blade_width_ * layer_overlap_fraction_ * z_direction_;
-    total_layers_  = std::max(1, (int)(vessel_height_ / std::abs(layer_step_z_)));
-
-    int resume = std::clamp(static_cast<int>(get_parameter("resume_layer").as_int()), 0, total_layers_ - 1);
-    current_layer_ = resume;
-
-    current_layer_z_ = fk_z + start_z_offset_ * z_direction_
-                      + current_layer_ * layer_step_z_;
-    circle_direction_cw_ = (current_layer_ % 2 == 0);
-
-    // Approach direction: inward unit vector (convention: APPROACH subtracts this to move outward)
-    double n  = std::hypot(fk_x, fk_y);
-    dir_x_ = (n > 1e-6) ? -fk_x / n : 0.0;
-    dir_y_ = (n > 1e-6) ? -fk_y / n : 0.0;
-
-    approach_start_x_    = fk_x;
-    approach_start_y_    = fk_y;
-    approach_start_time_ = now();
-    mode_ = Mode::APPROACH;
-
-    RCLCPP_INFO(get_logger(),
-      "Initialized: %d layers, step=%.4f m, layer 0 Z=%.4f, dir=%s",
-      total_layers_, layer_step_z_, current_layer_z_,
-      circle_direction_cw_ ? "CW" : "CCW");
-
-    if (resume > 0)
-      RCLCPP_WARN(get_logger(),
-        "Resuming from layer %d/%d  Z=%.4f",
-        current_layer_ + 1, total_layers_, current_layer_z_);
+    retract_start_time_ = now();
   }
 
-  // ── Motion helpers ────────────────────────────────────────────────────────
+  // Advance to the next layer: flip the sweep direction and the wrist-flip sign,
+  // re-arm the rotate worker, and drop back to RETRACT so the full
+  // RETRACT → ROTATE → APPROACH → CIRCLE chain runs again. RETRACT re-reads the
+  // current pose and lifts by move_up_distance_, so each layer's working height
+  // is move_up_distance_ above the previous one (the "step up").
+  void startNextLayer()
+  {
+    current_layer_++;
+    dir_sign_  = -dir_sign_;    // alternate CW/CCW sweep
+    flip_sign_ = -flip_sign_;   // alternate +π / −π wrist flip (bounded wind-up)
+
+    captureLayerStartPose();
+
+    rotate_launched_ = false;
+    rotate_done_     = false;
+    rotate_ok_       = false;
+
+    mode_ = Mode::RETRACT;
+
+    RCLCPP_WARN(get_logger(),
+      "── Layer %d/%d | sweep %s | flip %+.0f° | from z = %.4f ──",
+      current_layer_, num_layers_,
+      (dir_sign_ > 0.0 ? "CW" : "CCW"),
+      flip_sign_ * 180.0, start_z_);
+  }
+
+  // Re-read the live pose from FK after the joint-space flip so the compliance
+  // controller resumes from exactly where the arm now is (rotated orientation,
+  // unchanged X/Y/Z since wrist_3 spins about the tool Z through tool0).
+  void refreshPoseAfterRotate()
+  {
+    for (size_t i = 0; i < 6; ++i)
+      joints_(i) = joint_state_.position[i];
+
+    KDL::Frame frame;
+    fk_solver_->JntToCart(joints_, frame);
+
+    start_x_ = frame.p.x();
+    start_y_ = frame.p.y();
+    start_z_ = frame.p.z();
+
+    current_x_ = start_x_;
+    current_y_ = start_y_;
+
+    frame.M.GetQuaternion(qx_, qy_, qz_, qw_);
+
+    double n = std::hypot(start_x_, start_y_);
+    dir_x_ = -start_x_ / n;
+    dir_y_ = -start_y_ / n;
+  }
 
   double Scurve(double t)
   {
     t = std::clamp(t, 0.0, 1.0);
-    return 3.0*t*t - 2.0*t*t*t;
+    return 3*t*t - 2*t*t*t;
   }
 
-  // Re-enter APPROACH from the current (retracted) position toward the wall
-  void enterApproach()
+  // ---- ROTATE: switch to JTC, flip the tool via MoveIt, switch back ----------
+
+  void launchRotate()
   {
-    double n = std::hypot(current_x_, current_y_);
-    if (n > 1e-6) {
-      dir_x_ = -current_x_ / n;
-      dir_y_ = -current_y_ / n;
-    }
-    approach_start_x_    = current_x_;
-    approach_start_y_    = current_y_;
-    approach_start_time_ = now();
-    force_integral_      = 0.0;
-    mode_ = Mode::APPROACH;
+    if (rotate_launched_)
+      return;
+    rotate_launched_ = true;
+    mode_ = Mode::ROTATE;
+    RCLCPP_WARN(get_logger(),
+      "RETRACT done → ROTATE (compliance → joint_trajectory_controller via MoveIt)");
+    rotate_thread_ = std::thread(&CircleForce::runRotate, this);
   }
 
-  void enterRadialRetract()
+  void runRotate()
   {
-    double n = std::hypot(current_x_, current_y_);
-    retract_dir_x_      = (n > 1e-6) ? current_x_ / n : 1.0;
-    retract_dir_y_      = (n > 1e-6) ? current_y_ / n : 0.0;
-    retract_start_x_    = current_x_;
-    retract_start_y_    = current_y_;
-    retract_start_time_ = now();
-    mode_ = Mode::RADIAL_RETRACT;
-    RCLCPP_INFO(get_logger(), "Layer %d/%d complete → RETRACT",
-      current_layer_ + 1, total_layers_);
-  }
-
-  void enterZStep()
-  {
-    current_layer_++;
-    if (current_layer_ >= total_layers_) {
-      enterFinalRetract();
+    if (!switchControllers({"joint_trajectory_controller"},
+                           {"cartesian_compliance_controller"}))
+    {
+      RCLCPP_ERROR(get_logger(), "ROTATE: switch to joint_trajectory_controller failed");
+      rotate_ok_ = false;
+      rotate_done_ = true;
       return;
     }
-    circle_direction_cw_ = (current_layer_ % 2 == 0);
-    z_step_start_z_    = current_layer_z_;
-    z_step_target_z_   = current_layer_z_ + layer_step_z_;
-    z_step_start_time_ = now();
-    mode_ = Mode::Z_STEP;
+
+    if (!move_group_)
+    {
+      move_group_ =
+        std::make_shared<moveit::planning_interface::MoveGroupInterface>(
+          shared_from_this(), "ur_manipulator");
+      move_group_->setPlanningTime(10.0);
+      move_group_->setMaxVelocityScalingFactor(0.6);
+      move_group_->setMaxAccelerationScalingFactor(0.6);
+    }
+
+    // Group order: shoulder_pan, shoulder_lift, elbow, wrist_1, wrist_2, wrist_3
+    std::vector<double> jv = move_group_->getCurrentJointValues();
+    if (jv.size() < 6)
+    {
+      RCLCPP_ERROR(get_logger(), "ROTATE: could not read current joint values");
+      rotate_ok_ = false;
+      rotate_done_ = true;
+      return;
+    }
+
+    std::map<std::string, double> target;
+    target["shoulder_pan_joint"]  = jv[0];
+    target["shoulder_lift_joint"] = jv[1];
+    target["elbow_joint"]         = jv[2];
+    target["wrist_1_joint"]       = jv[3];
+    target["wrist_2_joint"]       = jv[4];
+    target["wrist_3_joint"]       = jv[5] + flip_sign_ * M_PI;   // ±180° tool flip about tool Z
+
+    move_group_->setJointValueTarget(target);
+
+    moveit::planning_interface::MoveGroupInterface::Plan plan;
+    if (move_group_->plan(plan) != moveit::core::MoveItErrorCode::SUCCESS)
+    {
+      RCLCPP_ERROR(get_logger(), "ROTATE: MoveIt planning failed");
+      rotate_ok_ = false;
+      rotate_done_ = true;
+      return;
+    }
     RCLCPP_INFO(get_logger(),
-      "Z step: layer %d/%d  Z %.4f → %.4f  [%s]",
-      current_layer_ + 1, total_layers_,
-      z_step_start_z_, z_step_target_z_,
-      circle_direction_cw_ ? "CW" : "CCW");
+      "ROTATE: plan OK → executing on joint_trajectory_controller");
+
+    if (!sendTrajectory(plan.trajectory_.joint_trajectory))
+    {
+      RCLCPP_ERROR(get_logger(), "ROTATE: trajectory execution failed");
+      rotate_ok_ = false;
+      rotate_done_ = true;
+      return;
+    }
+
+    if (!switchControllers({"cartesian_compliance_controller"},
+                           {"joint_trajectory_controller"}))
+    {
+      RCLCPP_ERROR(get_logger(), "ROTATE: switch back to compliance failed");
+      rotate_ok_ = false;
+      rotate_done_ = true;
+      return;
+    }
+
+    RCLCPP_WARN(get_logger(), "ROTATE complete → APPROACH");
+    rotate_ok_ = true;
+    rotate_done_ = true;
   }
 
-  void enterFinalRetract()
+  bool switchControllers(const std::vector<std::string> & activate,
+                         const std::vector<std::string> & deactivate)
   {
-    double n = std::hypot(current_x_, current_y_);
-    final_retract_dir_x_      = (n > 1e-6) ? current_x_ / n : 1.0;
-    final_retract_dir_y_      = (n > 1e-6) ? current_y_ / n : 0.0;
-    final_retract_start_x_    = current_x_;
-    final_retract_start_y_    = current_y_;
-    final_retract_start_time_ = now();
-    mode_ = Mode::FINAL_RETRACT;
-    RCLCPP_WARN(get_logger(), "All %d layers complete → FINAL RETRACT", total_layers_);
+    using SwitchController = controller_manager_msgs::srv::SwitchController;
+
+    auto client = create_client<SwitchController>(
+      "/controller_manager/switch_controller");
+    if (!client->wait_for_service(5s))
+    {
+      RCLCPP_ERROR(get_logger(), "switch_controller service unavailable");
+      return false;
+    }
+
+    auto req = std::make_shared<SwitchController::Request>();
+    req->activate_controllers = activate;
+    req->deactivate_controllers = deactivate;
+    req->strictness = SwitchController::Request::STRICT;
+    req->activate_asap = true;
+
+    // Called from the rotate worker thread; the main executor spins the node and
+    // delivers the response, so waiting here does not deadlock.
+    auto future = client->async_send_request(req);
+    if (future.wait_for(10s) != std::future_status::ready)
+    {
+      RCLCPP_ERROR(get_logger(), "switch_controller call timed out");
+      return false;
+    }
+    return future.get()->ok;
   }
 
-  void enterSafeZMove()
+  bool sendTrajectory(const trajectory_msgs::msg::JointTrajectory & traj)
   {
-    safe_z_start_z_    = current_layer_z_;
-    safe_z_start_time_ = now();
-    mode_ = Mode::SAFE_Z_MOVE;
-    RCLCPP_INFO(get_logger(), "Safe Z move: %.4f → %.4f", safe_z_start_z_, safe_z_height_);
+    auto ac = rclcpp_action::create_client<FollowJointTrajectory>(
+      this, "/joint_trajectory_controller/follow_joint_trajectory");
+    if (!ac->wait_for_action_server(10s))
+    {
+      RCLCPP_ERROR(get_logger(), "joint_trajectory_controller action server unavailable");
+      return false;
+    }
+
+    FollowJointTrajectory::Goal goal;
+    goal.trajectory = traj;
+
+    auto goal_future = ac->async_send_goal(goal);
+    if (goal_future.wait_for(10s) != std::future_status::ready)
+    {
+      RCLCPP_ERROR(get_logger(), "JTC goal send timed out");
+      return false;
+    }
+    auto goal_handle = goal_future.get();
+    if (!goal_handle)
+    {
+      RCLCPP_ERROR(get_logger(), "JTC goal rejected");
+      return false;
+    }
+
+    auto result_future = ac->async_get_result(goal_handle);
+    if (result_future.wait_for(30s) != std::future_status::ready)
+    {
+      RCLCPP_ERROR(get_logger(), "JTC result timed out");
+      return false;
+    }
+    return result_future.get().code == rclcpp_action::ResultCode::SUCCEEDED;
   }
-
-  // MoveIt homing in detached thread so the 50 Hz loop never blocks
-  void triggerHome()
-  {
-    // Capture shared_ptr so the node stays alive for the thread's duration
-    auto self = shared_from_this();
-    home_thread_ = std::thread([this, self]() {
-      try {
-        auto mg = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-          self, "ur_manipulator");
-        mg->setPlanningTime(15.0);
-        mg->setMaxVelocityScalingFactor(0.2);
-        mg->setMaxAccelerationScalingFactor(0.2);
-
-        std::map<std::string, double> home_joints;
-        home_joints["shoulder_pan_joint"]  = get_parameter("home_joint_shoulder_pan").as_double();
-        home_joints["shoulder_lift_joint"] = get_parameter("home_joint_shoulder_lift").as_double();
-        home_joints["elbow_joint"]         = get_parameter("home_joint_elbow").as_double();
-        home_joints["wrist_1_joint"]       = get_parameter("home_joint_wrist_1").as_double();
-        home_joints["wrist_2_joint"]       = get_parameter("home_joint_wrist_2").as_double();
-        home_joints["wrist_3_joint"]       = get_parameter("home_joint_wrist_3").as_double();
-
-        mg->setJointValueTarget(home_joints);
-        moveit::planning_interface::MoveGroupInterface::Plan plan;
-
-        if (mg->plan(plan) != moveit::core::MoveItErrorCode::SUCCESS) {
-          RCLCPP_ERROR(get_logger(), "Home planning failed");
-          home_failed_ = true;
-          return;
-        }
-        if (mg->execute(plan) != moveit::core::MoveItErrorCode::SUCCESS) {
-          RCLCPP_ERROR(get_logger(), "Home execution failed");
-          home_failed_ = true;
-          return;
-        }
-        home_complete_ = true;
-        RCLCPP_INFO(get_logger(), "Homing complete");
-      } catch (const std::exception & e) {
-        RCLCPP_ERROR(get_logger(), "Home thread exception: %s", e.what());
-        home_failed_ = true;
-      }
-    });
-    home_thread_.detach();
-  }
-
-  // ── Pose setpoint publisher ────────────────────────────────────────────────
 
   void publishTargetPose()
   {
     geometry_msgs::msg::PoseStamped pose;
-    pose.header.stamp    = now();
+    pose.header.stamp = now();
     pose.header.frame_id = "base_link";
 
-    switch (mode_)
+    if (mode_ == Mode::RETRACT)
     {
-    case Mode::IDLE:
-      return;
-
-    case Mode::APPROACH:
-    {
-      double t = (now() - approach_start_time_).seconds() / approach_duration_;
+      double t = (now() - retract_start_time_).seconds() / retract_duration_;
       double s = Scurve(t);
-      current_x_ = approach_start_x_ - s * approach_distance_ * dir_x_;
-      current_y_ = approach_start_y_ - s * approach_distance_ * dir_y_;
+
+      current_x_ = start_x_ + s * retract_distance_ * dir_x_;
+      current_y_ = start_y_ + s * retract_distance_ * dir_y_;
+      double z = start_z_ + s * move_up_distance_;
+
       pose.pose.position.x = current_x_;
       pose.pose.position.y = current_y_;
-      pose.pose.position.z = current_layer_z_;
+      pose.pose.position.z = z;
 
-      if ((now() - approach_start_time_).seconds() > approach_timeout_) {
-        RCLCPP_ERROR(get_logger(),
-          "Approach timeout at layer %d — no contact. STOPPING.", current_layer_ + 1);
-        mode_ = Mode::DONE;
+      if (t >= 1.0)
+      {
+        start_x_ = current_x_;
+        start_y_ = current_y_;
+        start_z_ = z;
+
+        launchRotate();   // hands the arm to MoveIt/JTC for the tool flip
       }
-      break;
     }
 
-    case Mode::CIRCLE:
+    else if (mode_ == Mode::APPROACH)
+    {
+      double t =
+        (now() - approach_start_time_).seconds() / approach_duration_;
+      t = std::clamp(t, 0.0, 1.0);
+
+      current_x_ = start_x_ - t * approach_distance_ * dir_x_;
+      current_y_ = start_y_ - t * approach_distance_ * dir_y_;
+
+      // Straight horizontal line at the retracted height — APPROACH only moves in
+      // X/Y, Z stays fixed at start_z_ (the height RETRACT just lifted to).
+      pose.pose.position.x = current_x_;
+      pose.pose.position.y = current_y_;
+      pose.pose.position.z = start_z_;
+    }
+
+    else if (mode_ == Mode::CIRCLE)
     {
       double dt = (now() - last_update_time_).seconds();
       last_update_time_ = now();
       dt = std::clamp(dt, 0.0, 0.1);
 
-      double elapsed    = (now() - circle_start_time_).seconds();
-      double total_time = max_angle_rad_ / angular_speed_;
-      double ramp_time  = circle_ramp_fraction_ * total_time;
+      // Angle-based S-curve ramp: ramp up over the first ramp_angle of travel and
+      // ramp down over the last ramp_angle of travel. Unlike a time-based ramp,
+      // this guarantees traveled_angle_ actually reaches max_angle_rad_ (the
+      // ramp-down term can't go negative), so the STOP transition always fires.
+      double ramp_angle = circle_ramp_fraction_ * max_angle_rad_;
+      double remaining = max_angle_rad_ - traveled_angle_;
 
-      // Speed ramp at start and end of arc
       double alpha = 1.0;
-      if (elapsed < ramp_time)
-        alpha = Scurve(elapsed / ramp_time);
-      else if (elapsed > total_time - ramp_time)
-        alpha = Scurve((total_time - elapsed) / ramp_time);
+      if (traveled_angle_ < ramp_angle)
+        alpha = Scurve(traveled_angle_ / ramp_angle);
+      else if (remaining < ramp_angle)
+        alpha = Scurve(remaining / ramp_angle);
 
-      // Force spike: linearly reduce omega between high_force_threshold and max_force_clamp
-      double fz_abs      = std::abs(measured_fz_);
-      double speed_scale = 1.0;
-      if (fz_abs > high_force_threshold_) {
-        double range  = std::max(max_force_clamp_ - high_force_threshold_, 1e-3);
-        double excess = fz_abs - high_force_threshold_;
-        speed_scale   = 1.0 - (1.0 - min_speed_fraction_) * std::min(excess / range, 1.0);
-      }
+      // Floor the speed so the deceleration tail never crawls to a halt before
+      // completing the arc.
+      alpha = std::max(alpha, min_speed_fraction_);
 
-      double sign  = circle_direction_cw_ ? -1.0 : 1.0;
-      double omega = sign * angular_speed_ * alpha * speed_scale;
+      // dir_sign_ alternates each layer: +1 keeps the original (CW) sweep, −1
+      // reverses it. Layer 1 = +1 (existing direction).
+      double omega = dir_sign_ * (-angular_speed_) * alpha;
 
-      // Radius PI: adapts to surface irregularity and off-centre placement
       double force_error = measured_fz_ - desired_circle_force_;
       force_integral_ += force_error * dt;
-      force_integral_  = std::clamp(force_integral_, -integral_limit_, integral_limit_);
-      double radius_dot = kp_radius_ * force_error + ki_radius_ * force_integral_;
-      radius_dot = std::clamp(radius_dot, -max_radius_rate_, max_radius_rate_);
+      force_integral_ =
+        std::clamp(force_integral_, -integral_limit_, integral_limit_);
+
+      double radius_dot =
+        kp_radius_ * force_error +
+        ki_radius_ * force_integral_;
+
+      radius_dot =
+        std::clamp(radius_dot, -max_radius_rate_, max_radius_rate_);
+
       radius_ += radius_dot * dt;
-      radius_  = std::clamp(radius_, vessel_r_min_, vessel_r_max_);
 
       double dtheta = omega * dt;
-      theta_          += dtheta;
+      theta_ += dtheta;
       traveled_angle_ += std::abs(dtheta);
 
-      // Update position before using it in enterRadialRetract
-      current_x_ = radius_ * std::cos(theta_);
-      current_y_ = radius_ * std::sin(theta_);
+      if (traveled_angle_ >= max_angle_rad_)
+      {
+        if (current_layer_ >= num_layers_)
+        {
+          mode_ = Mode::STOP;
+          RCLCPP_WARN(get_logger(),
+            "All %d layers complete → STOP", num_layers_);
+          return;
+        }
 
-      // Tool Z-axis points radially outward
+        RCLCPP_WARN(get_logger(),
+          "Layer %d/%d circle complete → next layer", current_layer_, num_layers_);
+        startNextLayer();
+        return;
+      }
+
       KDL::Vector z_axis(std::cos(theta_), std::sin(theta_), 0.0);
       z_axis.Normalize();
       KDL::Vector up(0, 0, 1);
+
       KDL::Vector x_axis = up * z_axis;
-      if (x_axis.Norm() < 1e-6) x_axis = KDL::Vector(1, 0, 0);
+      if (x_axis.Norm() < 1e-6)
+        x_axis = KDL::Vector(1, 0, 0);
       x_axis.Normalize();
+
       KDL::Vector y_axis = z_axis * x_axis;
       y_axis.Normalize();
+
       KDL::Rotation R(x_axis, y_axis, z_axis);
       R.GetQuaternion(qx_, qy_, qz_, qw_);
 
-      if (traveled_angle_ >= max_angle_rad_)
-        enterRadialRetract();
+      current_x_ = radius_ * std::cos(theta_);
+      current_y_ = radius_ * std::sin(theta_);
 
+      // CIRCLE runs at the same retracted height as APPROACH (start_z_) — never
+      // dips below it.
       pose.pose.position.x = current_x_;
       pose.pose.position.y = current_y_;
-      pose.pose.position.z = current_layer_z_;
-      break;
+      pose.pose.position.z = start_z_;
     }
 
-    case Mode::RADIAL_RETRACT:
+    else
     {
-      double t = (now() - retract_start_time_).seconds() / retract_duration_;
-      double s = Scurve(t);
-      current_x_ = retract_start_x_ - s * retract_distance_ * retract_dir_x_;
-      current_y_ = retract_start_y_ - s * retract_distance_ * retract_dir_y_;
       pose.pose.position.x = current_x_;
       pose.pose.position.y = current_y_;
-      pose.pose.position.z = current_layer_z_;
-      if (t >= 1.0)
-        enterZStep();
-      break;
-    }
-
-    case Mode::Z_STEP:
-    {
-      double t = (now() - z_step_start_time_).seconds() / z_step_duration_;
-      double s = Scurve(t);
-      pose.pose.position.x = current_x_;
-      pose.pose.position.y = current_y_;
-      pose.pose.position.z = z_step_start_z_ + s * (z_step_target_z_ - z_step_start_z_);
-      if (t >= 1.0) {
-        current_layer_z_ = z_step_target_z_;
-        enterApproach();
-      }
-      break;
-    }
-
-    case Mode::FINAL_RETRACT:
-    {
-      double t = (now() - final_retract_start_time_).seconds() / final_retract_duration_;
-      double s = Scurve(t);
-      current_x_ = final_retract_start_x_ - s * final_retract_distance_ * final_retract_dir_x_;
-      current_y_ = final_retract_start_y_ - s * final_retract_distance_ * final_retract_dir_y_;
-      pose.pose.position.x = current_x_;
-      pose.pose.position.y = current_y_;
-      pose.pose.position.z = current_layer_z_;
-      if (t >= 1.0)
-        enterSafeZMove();
-      break;
-    }
-
-    case Mode::SAFE_Z_MOVE:
-    {
-      double t = (now() - safe_z_start_time_).seconds() / safe_z_duration_;
-      double s = Scurve(t);
-      pose.pose.position.x = current_x_;
-      pose.pose.position.y = current_y_;
-      pose.pose.position.z = safe_z_start_z_ + s * (safe_z_height_ - safe_z_start_z_);
-      if (t >= 1.0) {
-        mode_ = Mode::HOMING;
-        RCLCPP_INFO(get_logger(), "Safe Z reached → HOMING");
-      }
-      break;
-    }
-
-    case Mode::HOMING:
-    {
-      if (!homing_triggered_) {
-        triggerHome();
-        homing_triggered_ = true;
-      }
-      if (home_complete_) {
-        mode_ = Mode::DONE;
-        RCLCPP_WARN(get_logger(), "DONE — vessel cleaning complete");
-      } else if (home_failed_) {
-        home_retry_count_++;
-        if (home_retry_count_ <= max_home_retries_) {
-          RCLCPP_WARN(get_logger(),
-            "Homing failed — retry %d/%d", home_retry_count_, max_home_retries_);
-          home_failed_       = false;
-          homing_triggered_  = false;
-        } else {
-          RCLCPP_ERROR(get_logger(),
-            "Homing failed after %d attempts. Manual intervention required.",
-            max_home_retries_);
-        }
-      }
-      pose.pose.position.x = current_x_;
-      pose.pose.position.y = current_y_;
-      pose.pose.position.z = safe_z_height_;
-      break;
-    }
-
-    case Mode::DONE:
-      pose.pose.position.x = current_x_;
-      pose.pose.position.y = current_y_;
-      pose.pose.position.z = safe_z_height_;
-      break;
+      pose.pose.position.z = start_z_;
     }
 
     pose.pose.orientation.x = qx_;
     pose.pose.orientation.y = qy_;
     pose.pose.orientation.z = qz_;
     pose.pose.orientation.w = qw_;
+
     target_pose_pub_->publish(pose);
   }
-
-  // ── Wrench setpoint publisher ──────────────────────────────────────────────
 
   void publishTargetWrench()
   {
     geometry_msgs::msg::WrenchStamped wrench;
-    wrench.header.stamp    = now();
+    wrench.header.stamp = now();
     wrench.header.frame_id = "tool0";
 
-    switch (mode_) {
-      case Mode::APPROACH: wrench.wrench.force.z = approach_force_z_; break;
-      case Mode::CIRCLE:   wrench.wrench.force.z = circle_force_z_;   break;
-      default:             wrench.wrench.force.z = 0.0; break;
-    }
+    wrench.wrench.force.z =
+      (mode_ == Mode::STOP) ? 0.0 :
+      (mode_ == Mode::APPROACH ? approach_force_z_ : circle_force_z_);
+
     target_wrench_pub_->publish(wrench);
   }
 
-  // ── ROS interfaces ─────────────────────────────────────────────────────────
-  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr      joint_sub_;
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr             robot_desc_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_sub_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr robot_desc_sub_;
   rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr ft_sub_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr      target_pose_pub_;
-  rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr    target_wrench_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr target_pose_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr target_wrench_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 
-  // ── Sensor data ────────────────────────────────────────────────────────────
   sensor_msgs::msg::JointState joint_state_;
   std::string robot_description_;
+
   bool got_joints_{false}, got_urdf_{false}, got_ft_{false}, kdl_ready_{false};
 
-  // ── KDL ────────────────────────────────────────────────────────────────────
   KDL::Chain chain_;
   KDL::JntArray joints_;
   std::unique_ptr<KDL::ChainFkSolverPos_recursive> fk_solver_;
 
-  // ── State machine ──────────────────────────────────────────────────────────
-  Mode mode_{Mode::IDLE};
-  int  current_layer_{0};
-  int  total_layers_{0};
-  bool circle_direction_cw_{true};
-  bool homing_triggered_{false};
-  int  home_retry_count_{0};
-  static constexpr int max_home_retries_{3};
+  // ROTATE worker (off the executor thread so the controller-switch service and
+  // MoveIt blocking calls do not deadlock the main spin).
+  std::thread rotate_thread_;
+  std::atomic<bool> rotate_launched_{false};
+  std::atomic<bool> rotate_done_{false};
+  std::atomic<bool> rotate_ok_{false};
+  std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_;
 
-  // ── Timing ─────────────────────────────────────────────────────────────────
-  rclcpp::Time approach_start_time_;
+  rclcpp::Time retract_start_time_, approach_start_time_;
   rclcpp::Time circle_start_time_, last_update_time_;
-  rclcpp::Time retract_start_time_;
-  rclcpp::Time z_step_start_time_;
-  rclcpp::Time final_retract_start_time_;
-  rclcpp::Time safe_z_start_time_;
 
-  // ── Position tracking ──────────────────────────────────────────────────────
-  double current_x_{0.0}, current_y_{0.0};
-  double current_layer_z_{0.0};
-  double layer_step_z_{0.0};
-  double dir_x_{0.0}, dir_y_{0.0};            // inward unit vector (approach sign convention)
-  double approach_start_x_{0.0}, approach_start_y_{0.0};
-  double retract_start_x_{0.0}, retract_start_y_{0.0};
-  double retract_dir_x_{0.0}, retract_dir_y_{0.0};
-  double z_step_start_z_{0.0}, z_step_target_z_{0.0};
-  double final_retract_start_x_{0.0}, final_retract_start_y_{0.0};
-  double final_retract_dir_x_{0.0}, final_retract_dir_y_{0.0};
-  double safe_z_start_z_{0.0};
+  double start_x_, start_y_, start_z_;
+  double current_x_, current_y_;
+  double dir_x_, dir_y_;
 
-  // ── Force control ──────────────────────────────────────────────────────────
   double radius_{0.0}, theta_{0.0}, traveled_angle_{0.0};
   double measured_fz_{0.0}, force_integral_{0.0};
 
-  // ── Orientation ────────────────────────────────────────────────────────────
-  double qx_{0.0}, qy_{0.0}, qz_{0.0}, qw_{1.0};
+  double qx_, qy_, qz_, qw_;
 
-  // ── MoveIt threading ───────────────────────────────────────────────────────
-  std::thread home_thread_;
-  std::atomic<bool> home_complete_{false};
-  std::atomic<bool> home_failed_{false};
+  // Multi-layer loop state.
+  int    num_layers_;            // total layers to run (from YAML)
+  int    current_layer_{1};      // 1-indexed; STOP fires after current == num_layers_
+  double dir_sign_{1.0};         // +1 = original (CW) sweep, −1 = reversed; flips per layer
+  double flip_sign_{1.0};        // +1 = +π wrist flip, −1 = −π; flips per layer
 
-  // ── Parameters (loaded in readStartPose) ──────────────────────────────────
-  double z_direction_{1.0};
-  double vessel_height_{0.85};
-  double vessel_r_min_{0.20}, vessel_r_max_{0.60};
-  double blade_width_{0.03};
-  double layer_overlap_fraction_{0.90};
-  double start_z_offset_{0.0};
-  double approach_distance_{0.35};
-  double approach_duration_{7.0};
-  double approach_timeout_{20.0};
-  double angular_speed_{0.25};
-  double max_angle_rad_{6.2832};
-  double contact_force_threshold_{2.0};
-  double desired_circle_force_{-10.0};
-  double circle_ramp_fraction_{0.15};
-  double high_force_threshold_{15.0};
-  double max_force_clamp_{25.0};
-  double min_speed_fraction_{0.15};
-  double kp_radius_{0.5};
-  double ki_radius_{0.005};
-  double integral_limit_{2.0};
-  double max_radius_rate_{0.01};
-  double approach_force_z_{-5.0};
-  double circle_force_z_{-3.0};
-  double retract_distance_{0.15};
-  double retract_duration_{3.0};
-  double z_step_duration_{2.0};
-  double final_retract_distance_{0.30};
-  double final_retract_duration_{4.0};
-  double safe_z_height_{0.20};
-  double safe_z_duration_{3.0};
+  // All loaded from the params file in loadParams() (required — no defaults).
+  double retract_duration_;
+  double retract_distance_;
+  double move_up_distance_;
+
+  double approach_distance_;
+  double approach_duration_;
+
+  double angular_speed_;
+  double contact_force_threshold_;
+  double desired_circle_force_;
+
+  double kp_radius_;
+  double ki_radius_;
+  double integral_limit_;
+  double max_radius_rate_;
+  double max_angle_rad_;        // one full circle (2π = 360°)
+  double circle_ramp_fraction_; // fraction of the arc used for each speed ramp
+  double min_speed_fraction_;   // speed floor so the ramp-down completes the arc
+
+  double approach_force_z_;     // Fz setpoint during APPROACH
+  double circle_force_z_;       // constant compliance Fz bias during CIRCLE
 };
 
 int main(int argc, char **argv)
