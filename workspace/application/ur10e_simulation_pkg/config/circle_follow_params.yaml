@@ -1,75 +1,29 @@
 circle_follow_node:
   ros__parameters:
 
-    # ---- Hardware / Environment ----
-    z_direction:               1.0     # +1 sim (Z up), -1 real hardware (Z down into vessel)
-    tick_rate_hz:              50.0     # Hz — BehaviorTree tick / control-loop rate
-
-    # ---- Vessel Geometry (upside-down cylinder, wall facing outward) ----
-    vessel_height:             0.90    # m — total cleaning height
-    vessel_inner_radius_min:   0.01    # m — wide lower clamp (must NOT pull tool off wall)
-    vessel_inner_radius_max:   1.50    # m — wide upper clamp (safety only; lets radius track wall)
-
-    # ---- Layer Progression ----
-    blade_length:              0.15    # m — scraper blade contact length
-    layer_overlap_fraction:    0.50    # 0–1 — fraction of blade that overlaps prev layer
-                                       #       layer_step = blade_length * (1 - overlap)
-    start_z_offset:            0.00    # m — offset added to FK home Z to place layer 0
-
-    # ---- Resume / Checkpoint ----
-    resume_layer:              0       # int — fallback start layer if no state file (0 = fresh)
-    state_file_path:          "~/.ur10e_clean_state.yaml"  # checkpoint file (layer/direction/clock)
-
-    # ---- Protective-stop Recovery (real robot only; no-op in sim) ----
-    enable_dashboard_recovery: false   # true → call unlock_protective_stop + resend_robot_program on startup
+    # ---- Retract Phase ----
+    retract_duration:        2.0      # s — back-off S-curve time
+    retract_distance:        0.10     # m — radial inward travel
+    move_up_distance:        0.10     # m — vertical lift during retract
 
     # ---- Approach Phase ----
-    approach_distance:         0.35    # m — radial travel toward wall
-    approach_duration:         7.0     # s — S-curve approach time
-    approach_timeout:          20.0    # s — abort APPROACH if no contact within this time
+    approach_distance:       0.35     # m — radial travel toward wall
+    approach_duration:       7.0      # s — S-curve approach time
 
     # ---- Circle Phase ----
-    angular_speed:             0.25    # rad/s — nominal angular velocity
-    max_angle_rad:             6.2832  # rad — arc per layer (6.2832 = one full circle)
-    contact_force_threshold:   2.0     # N — |Fz| to declare contact during APPROACH
-    desired_circle_force:     -10.0    # N — target contact force (negative = into wall in sim)
-    circle_ramp_fraction:      0.15    # fraction of total arc used for speed ramp (angle-based)
+    angular_speed:           0.35      # rad/s — nominal angular velocity
+    contact_force_threshold: 2.0      # N — |Fz| to declare contact during APPROACH
+    desired_circle_force:   -10.0     # N — target contact force
+    max_angle_rad:           6.2832   # rad — arc per circle (2π = one full 360°)
+    circle_ramp_fraction:    0.10     # fraction of the arc used for each speed ramp
+    min_speed_fraction:      0.15     # speed floor so the ramp-down completes the arc
 
-    # ---- Adaptive Hard-spot Handling (escalate-then-retreat) ----
-    high_force_threshold:      15.0    # N — |Fz| above which we enter SCRAPE (slow + push harder)
-    scrape_force_z:           -18.0    # N — escalated target force to grind through solidified residue
-    danger_force_threshold:    22.0    # N — |Fz| at which we RETREAT (ease radius) to avoid protective stop
-    max_force_clamp:           25.0    # N — |Fz| at which omega reaches min_speed_fraction
-    min_speed_fraction:        0.15    # 0–1 — floor on angular speed during a spike
-
-    # ---- Force PI Controller (radius adaptation) — tracks the wall to hold force ----
-    kp_radius:                 0.5     # m/(N·s) — proportional gain (grows radius into wall)
-    ki_radius:                 0.005   # m/N     — integral gain
-    integral_limit:            2.0     # N·s     — anti-windup clamp
-    max_radius_rate:           0.01    # m/s     — max allowed radius change per second
-    force_deadband:            0.0     # N       — 0 = raw PI (matches proven wall-following code)
-    radius_rate_smoothing:     1.0     # 0–1     — 1.0 = no smoothing (matches proven code)
+    # ---- Force PI Controller (radius adaptation) ----
+    kp_radius:               0.5      # m/(N·s) — proportional gain
+    ki_radius:               0.005    # m/N     — integral gain
+    integral_limit:          2.0      # N·s     — anti-windup clamp
+    max_radius_rate:         0.01     # m/s     — max radius change per second
 
     # ---- Target Wrench ----
-    approach_force_z:         -5.0     # N — Fz setpoint during APPROACH
-    circle_force_z:           -3.0     # N — constant compliance Fz bias during CIRCLE
-                                       #     (PI drives radius to reach desired_circle_force)
-
-    # ---- Layer Transition (Radial Back-off + Z Step) ----
-    retract_distance:          0.10    # m — radial inward travel after each circle
-    retract_duration:          3.0     # s — back-off S-curve time
-    z_step_duration:           2.0     # s — Z transition S-curve time
-
-    # ---- Final Retract + Safe Z Move ----
-    final_retract_distance:    0.30    # m — full radial retract after last layer
-    final_retract_duration:    4.0     # s
-    safe_z_height:             0.20    # m — absolute Z to move to before homing
-    safe_z_duration:           3.0     # s
-
-    # ---- Home Joint Angles (radians) — match ur10e_home.cpp ----
-    home_joint_shoulder_pan:   0.40960574676343686
-    home_joint_shoulder_lift: -1.6747645009139471
-    home_joint_elbow:         -2.401686248302344
-    home_joint_wrist_1:        0.9661313426465519
-    home_joint_wrist_2:        1.1646508483476774
-    home_joint_wrist_3:       -3.1578720449159454
+    approach_force_z:       -5.0      # N — Fz setpoint during APPROACH
+    circle_force_z:         -3.0      # N — constant compliance Fz bias during CIRCLE

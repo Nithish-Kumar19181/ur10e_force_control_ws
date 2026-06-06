@@ -36,6 +36,8 @@ public:
   CircleForce()
   : Node("retract_rotate_approach_circle")
   {
+    loadParams();
+
     joint_sub_ = create_subscription<sensor_msgs::msg::JointState>(
       "/joint_states", rclcpp::SensorDataQoS(),
       std::bind(&CircleForce::jointCb, this, _1));
@@ -74,6 +76,39 @@ private:
 
   using FollowJointTrajectory = control_msgs::action::FollowJointTrajectory;
 
+  // Loads every tunable from the params file. Declared with a bare type (no
+  // default), so the node throws at construction if any param is missing —
+  // the YAML is required.
+  void loadParams()
+  {
+    auto req = [this](const std::string & name) -> double
+    {
+      declare_parameter(name, rclcpp::PARAMETER_DOUBLE);
+      return get_parameter(name).as_double();
+    };
+
+    retract_duration_        = req("retract_duration");
+    retract_distance_        = req("retract_distance");
+    move_up_distance_        = req("move_up_distance");
+
+    approach_distance_       = req("approach_distance");
+    approach_duration_       = req("approach_duration");
+
+    angular_speed_           = req("angular_speed");
+    contact_force_threshold_ = req("contact_force_threshold");
+    desired_circle_force_    = req("desired_circle_force");
+
+    kp_radius_               = req("kp_radius");
+    ki_radius_               = req("ki_radius");
+    integral_limit_          = req("integral_limit");
+    max_radius_rate_         = req("max_radius_rate");
+    max_angle_rad_           = req("max_angle_rad");
+    circle_ramp_fraction_    = req("circle_ramp_fraction");
+    min_speed_fraction_      = req("min_speed_fraction");
+
+    approach_force_z_        = req("approach_force_z");
+    circle_force_z_          = req("circle_force_z");
+  }
 
   void jointCb(const sensor_msgs::msg::JointState::SharedPtr msg)
   {
@@ -424,16 +459,22 @@ private:
       last_update_time_ = now();
       dt = std::clamp(dt, 0.0, 0.1);
 
-      double elapsed = (now() - circle_start_time_).seconds();
-      double total_time = max_angle_rad_ / angular_speed_;
-      double ramp_time = 0.15 * total_time;
+      // Angle-based S-curve ramp: ramp up over the first ramp_angle of travel and
+      // ramp down over the last ramp_angle of travel. Unlike a time-based ramp,
+      // this guarantees traveled_angle_ actually reaches max_angle_rad_ (the
+      // ramp-down term can't go negative), so the STOP transition always fires.
+      double ramp_angle = circle_ramp_fraction_ * max_angle_rad_;
+      double remaining = max_angle_rad_ - traveled_angle_;
 
       double alpha = 1.0;
+      if (traveled_angle_ < ramp_angle)
+        alpha = Scurve(traveled_angle_ / ramp_angle);
+      else if (remaining < ramp_angle)
+        alpha = Scurve(remaining / ramp_angle);
 
-      if (elapsed < ramp_time)
-        alpha = Scurve(elapsed / ramp_time);
-      else if (elapsed > total_time - ramp_time)
-        alpha = Scurve((total_time - elapsed) / ramp_time);
+      // Floor the speed so the deceleration tail never crawls to a halt before
+      // completing the arc.
+      alpha = std::max(alpha, min_speed_fraction_);
 
       double omega = -angular_speed_ * alpha;
 
@@ -507,7 +548,7 @@ private:
 
     wrench.wrench.force.z =
       (mode_ == Mode::STOP) ? 0.0 :
-      (mode_ == Mode::APPROACH ? -5.0 : -3.0);
+      (mode_ == Mode::APPROACH ? approach_force_z_ : circle_force_z_);
 
     target_wrench_pub_->publish(wrench);
   }
@@ -548,22 +589,28 @@ private:
 
   double qx_, qy_, qz_, qw_;
 
-  const double retract_duration_{3.0};
-  const double retract_distance_{0.15};
-  const double move_up_distance_{0.10};
+  // All loaded from the params file in loadParams() (required — no defaults).
+  double retract_duration_;
+  double retract_distance_;
+  double move_up_distance_;
 
-  const double approach_distance_{0.35};
-  const double approach_duration_{7.0};
+  double approach_distance_;
+  double approach_duration_;
 
-  const double angular_speed_{1.0};
-  const double contact_force_threshold_{2.0};
-  const double desired_circle_force_{-10.0};
+  double angular_speed_;
+  double contact_force_threshold_;
+  double desired_circle_force_;
 
-  const double kp_radius_{0.5};
-  const double ki_radius_{0.005};
-  const double integral_limit_{2.0};
-  const double max_radius_rate_{0.01};
-  const double max_angle_rad_{7.29};
+  double kp_radius_;
+  double ki_radius_;
+  double integral_limit_;
+  double max_radius_rate_;
+  double max_angle_rad_;        // one full circle (2π = 360°)
+  double circle_ramp_fraction_; // fraction of the arc used for each speed ramp
+  double min_speed_fraction_;   // speed floor so the ramp-down completes the arc
+
+  double approach_force_z_;     // Fz setpoint during APPROACH
+  double circle_force_z_;       // constant compliance Fz bias during CIRCLE
 };
 
 int main(int argc, char **argv)
