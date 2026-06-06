@@ -253,8 +253,8 @@ private:
         std::make_shared<moveit::planning_interface::MoveGroupInterface>(
           shared_from_this(), "ur_manipulator");
       move_group_->setPlanningTime(10.0);
-      move_group_->setMaxVelocityScalingFactor(0.2);
-      move_group_->setMaxAccelerationScalingFactor(0.2);
+      move_group_->setMaxVelocityScalingFactor(0.6);
+      move_group_->setMaxAccelerationScalingFactor(0.6);
     }
 
     // Group order: shoulder_pan, shoulder_lift, elbow, wrist_1, wrist_2, wrist_3
@@ -555,7 +555,7 @@ private:
   const double approach_distance_{0.35};
   const double approach_duration_{7.0};
 
-  const double angular_speed_{0.25};
+  const double angular_speed_{1.0};
   const double contact_force_threshold_{2.0};
   const double desired_circle_force_{-10.0};
 
