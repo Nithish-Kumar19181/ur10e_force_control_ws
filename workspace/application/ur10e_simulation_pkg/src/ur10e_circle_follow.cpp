@@ -61,7 +61,8 @@ public:
       20ms, std::bind(&CircleForce::update, this));
 
     RCLCPP_INFO(get_logger(),
-      "Retract → Rotate(MoveIt/JTC) → Approach → Circle → STOP");
+      "Looping %d layers: Retract → Rotate(MoveIt/JTC) → Approach → Circle "
+      "(alternating direction) → STOP", num_layers_);
   }
 
   ~CircleForce() override
@@ -108,6 +109,9 @@ private:
 
     approach_force_z_        = req("approach_force_z");
     circle_force_z_          = req("circle_force_z");
+
+    declare_parameter("num_layers", rclcpp::PARAMETER_INTEGER);
+    num_layers_ = static_cast<int>(get_parameter("num_layers").as_int());
   }
 
   void jointCb(const sensor_msgs::msg::JointState::SharedPtr msg)
@@ -203,7 +207,16 @@ private:
     joints_.resize(chain_.getNrOfJoints());
   }
 
+  // First-time setup for layer 1 — identical to a per-layer capture.
   void readStartPose()
+  {
+    captureLayerStartPose();
+  }
+
+  // Re-read the live FK pose into the start_/dir_ fields and reset the retract
+  // clock. Used at the start of every layer (layer 1 via readStartPose, layers
+  // 2..N via startNextLayer) so RETRACT operates from wherever the arm now is.
+  void captureLayerStartPose()
   {
     for (size_t i = 0; i < 6; ++i)
       joints_(i) = joint_state_.position[i];
@@ -225,6 +238,32 @@ private:
     dir_y_ = -start_y_ / n;
 
     retract_start_time_ = now();
+  }
+
+  // Advance to the next layer: flip the sweep direction and the wrist-flip sign,
+  // re-arm the rotate worker, and drop back to RETRACT so the full
+  // RETRACT → ROTATE → APPROACH → CIRCLE chain runs again. RETRACT re-reads the
+  // current pose and lifts by move_up_distance_, so each layer's working height
+  // is move_up_distance_ above the previous one (the "step up").
+  void startNextLayer()
+  {
+    current_layer_++;
+    dir_sign_  = -dir_sign_;    // alternate CW/CCW sweep
+    flip_sign_ = -flip_sign_;   // alternate +π / −π wrist flip (bounded wind-up)
+
+    captureLayerStartPose();
+
+    rotate_launched_ = false;
+    rotate_done_     = false;
+    rotate_ok_       = false;
+
+    mode_ = Mode::RETRACT;
+
+    RCLCPP_WARN(get_logger(),
+      "── Layer %d/%d | sweep %s | flip %+.0f° | from z = %.4f ──",
+      current_layer_, num_layers_,
+      (dir_sign_ > 0.0 ? "CW" : "CCW"),
+      flip_sign_ * 180.0, start_z_);
   }
 
   // Re-read the live pose from FK after the joint-space flip so the compliance
@@ -308,7 +347,7 @@ private:
     target["elbow_joint"]         = jv[2];
     target["wrist_1_joint"]       = jv[3];
     target["wrist_2_joint"]       = jv[4];
-    target["wrist_3_joint"]       = jv[5] + M_PI;   // 180° tool flip about tool Z
+    target["wrist_3_joint"]       = jv[5] + flip_sign_ * M_PI;   // ±180° tool flip about tool Z
 
     move_group_->setJointValueTarget(target);
 
@@ -448,6 +487,8 @@ private:
       current_x_ = start_x_ - t * approach_distance_ * dir_x_;
       current_y_ = start_y_ - t * approach_distance_ * dir_y_;
 
+      // Straight horizontal line at the retracted height — APPROACH only moves in
+      // X/Y, Z stays fixed at start_z_ (the height RETRACT just lifted to).
       pose.pose.position.x = current_x_;
       pose.pose.position.y = current_y_;
       pose.pose.position.z = start_z_;
@@ -476,7 +517,9 @@ private:
       // completing the arc.
       alpha = std::max(alpha, min_speed_fraction_);
 
-      double omega = -angular_speed_ * alpha;
+      // dir_sign_ alternates each layer: +1 keeps the original (CW) sweep, −1
+      // reverses it. Layer 1 = +1 (existing direction).
+      double omega = dir_sign_ * (-angular_speed_) * alpha;
 
       double force_error = measured_fz_ - desired_circle_force_;
       force_integral_ += force_error * dt;
@@ -498,8 +541,18 @@ private:
 
       if (traveled_angle_ >= max_angle_rad_)
       {
-        mode_ = Mode::STOP;
-        RCLCPP_WARN(get_logger(), "Circle complete → STOP");
+        if (current_layer_ >= num_layers_)
+        {
+          mode_ = Mode::STOP;
+          RCLCPP_WARN(get_logger(),
+            "All %d layers complete → STOP", num_layers_);
+          return;
+        }
+
+        RCLCPP_WARN(get_logger(),
+          "Layer %d/%d circle complete → next layer", current_layer_, num_layers_);
+        startNextLayer();
+        return;
       }
 
       KDL::Vector z_axis(std::cos(theta_), std::sin(theta_), 0.0);
@@ -520,6 +573,8 @@ private:
       current_x_ = radius_ * std::cos(theta_);
       current_y_ = radius_ * std::sin(theta_);
 
+      // CIRCLE runs at the same retracted height as APPROACH (start_z_) — never
+      // dips below it.
       pose.pose.position.x = current_x_;
       pose.pose.position.y = current_y_;
       pose.pose.position.z = start_z_;
@@ -588,6 +643,12 @@ private:
   double measured_fz_{0.0}, force_integral_{0.0};
 
   double qx_, qy_, qz_, qw_;
+
+  // Multi-layer loop state.
+  int    num_layers_;            // total layers to run (from YAML)
+  int    current_layer_{1};      // 1-indexed; STOP fires after current == num_layers_
+  double dir_sign_{1.0};         // +1 = original (CW) sweep, −1 = reversed; flips per layer
+  double flip_sign_{1.0};        // +1 = +π wrist flip, −1 = −π; flips per layer
 
   // All loaded from the params file in loadParams() (required — no defaults).
   double retract_duration_;

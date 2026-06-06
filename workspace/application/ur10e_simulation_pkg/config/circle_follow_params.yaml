@@ -27,3 +27,7 @@ circle_follow_node:
     # ---- Target Wrench ----
     approach_force_z:       -5.0      # N — Fz setpoint during APPROACH
     circle_force_z:         -3.0      # N — constant compliance Fz bias during CIRCLE
+
+    # ---- Multi-Layer Loop ----
+    num_layers:              9        # how many RETRACT→ROTATE→APPROACH→CIRCLE layers
+                                      # each layer rises move_up_distance above the previous
