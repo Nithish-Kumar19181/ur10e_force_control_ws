@@ -16,6 +16,11 @@ find_package(orocos_kdl REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(urdf REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(controller_manager_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
+find_package(trajectory_msgs REQUIRED)
+find_package(behaviortree_cpp_v3 REQUIRED)
+find_package(std_srvs REQUIRED)
 
 add_executable(ur10e_circle_follow src/ur10e_circle_follow.cpp)
 add_executable(ur10e_retract src/ur10e_retract.cpp)
@@ -71,13 +76,19 @@ install(
 )
 ament_target_dependencies(ur10e_circle_follow
   rclcpp
+  rclcpp_action
   geometry_msgs
   tf2
   sensor_msgs
+  std_srvs
   urdf
   orocos_kdl
   kdl_parser
   moveit_ros_planning_interface
+  controller_manager_msgs
+  control_msgs
+  trajectory_msgs
+  behaviortree_cpp_v3
 )
 
 ament_target_dependencies(ur10e_retract

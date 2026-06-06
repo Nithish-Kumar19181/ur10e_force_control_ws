@@ -19,6 +19,11 @@
   <depend>orocos_kdl</depend>
   <depend>rclcpp_action</depend>
   <depend>moveit_ros_planning_interface</depend>
+  <depend>controller_manager_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>behaviortree_cpp_v3</depend>
+  <depend>std_srvs</depend>
 
   <build_depend>gazebo_dev</build_depend>
   <build_depend>gazebo</build_depend>
