@@ -9,6 +9,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch.conditions import IfCondition
 
 
@@ -55,6 +56,15 @@ def generate_launch_description():
         launch_arguments={
             "ur_type": "ur10e",
             "controllers_file": controllers_yaml,
+            # Use the custom SRDF that disables end_effector_link / ft_frame collisions
+            "moveit_config_package": "ur10e_simulation_pkg",
+            "moveit_config_file": "ur10e.srdf.xacro",
+            "spawn_x": "1.3",
+            "spawn_y": "0.0",
+            "spawn_z": "2.1",
+            "spawn_roll": "0.0",
+            "spawn_pitch": "0.0",
+            "spawn_yaw": "0.0",
         }.items()
     )
 
@@ -91,6 +101,24 @@ def generate_launch_description():
         )],
     )
 
+    # Connect the arm TF tree (root: world) to the mixer TF tree (root: mixer_world)
+    # so MoveIt can place the mixer in its planning frame instead of warning about
+    # "two or more unconnected trees". The arm is spawned in Gazebo at
+    # (x=1.2, y=0, z=2.1, rpy=0); the mixer at the Gazebo origin. Expressing the mixer
+    # in the arm's `world` frame is the inverse of that spawn pose: (-1.2, 0, -2.1).
+    world_to_mixer_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='world_to_mixer_world',
+        arguments=[
+            '--x', '-1.2', '--y', '0.0', '--z', '-2.1',
+            '--yaw', '0.0', '--pitch', '0.0', '--roll', '0.0',
+            '--frame-id', 'world', '--child-frame-id', 'mixer_world',
+        ],
+        parameters=[{'use_sim_time': True}],
+        output='screen',
+    )
+
     # Dedicated mixer robot_state_publisher in /mixer with prefixed TF frames.
     planetary_state_publisher = Node(
         package='robot_state_publisher',
@@ -100,7 +128,7 @@ def generate_launch_description():
         output='screen',
         parameters=[
             {'use_sim_time': True},
-            {'robot_description': planetary_urdf_content},
+            {'robot_description': ParameterValue(planetary_urdf_content, value_type=str)},
             {'frame_prefix': 'mixer_'},
         ],
         remappings=[
@@ -108,26 +136,11 @@ def generate_launch_description():
         ]
     )
 
-    # Mixer controllers must target mixer's namespaced controller manager.
-    jsb_spawner_mixer = TimerAction(
-        period=4.5,
-        actions=[Node(
-            package='controller_manager',
-            executable='spawner',
-            arguments=['joint_state_broadcaster', '--controller-manager', '/mixer/controller_manager'],
-            output='screen',
-        )],
-    )
-
-    fpc_spawner_mixer = TimerAction(
-        period=5.5,
-        actions=[Node(
-            package='controller_manager',
-            executable='spawner',
-            arguments=['forward_position_controller', '--controller-manager', '/mixer/controller_manager'],
-            output='screen',
-        )],
-    )
+    # NOTE: the mixer no longer uses ros2_control / a /mixer/controller_manager.
+    # A second gazebo_ros2_control instance segfaults gzserver, so the mixer is
+    # driven kinematically via libgazebo_ros_joint_pose_trajectory (see the SDF).
+    # planetary_kinematics_node publishes /mixer/set_joint_trajectory directly;
+    # no joint_state_broadcaster / forward_position_controller spawners are needed.
 
     # Mixer-only helper nodes in /mixer namespace.
     kinematics_node = TimerAction(
@@ -199,9 +212,8 @@ def generate_launch_description():
         delayed_ur_compliance_loader,
         delayed_marker_node,
         filtered_force_node,
-        # Mixer (/mixer + /mixer/controller_manager)
-        jsb_spawner_mixer,
-        fpc_spawner_mixer,
+        # Mixer (/mixer, kinematic — no controller_manager)
+        world_to_mixer_tf,
         planetary_state_publisher,
         kinematics_node,
         # demo_motion_node,

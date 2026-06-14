@@ -320,54 +320,20 @@
       </axis>
     </joint>
 
-    <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
-      <parameters>/home/nithish/ur10e_force_mode_ws/src/ur10e_simulation_pkg/config/controllers.yaml</parameters>
+    <!-- Kinematic driver for the mixer joints.
+         NOTE: this model deliberately does NOT use gazebo_ros2_control. The arm
+         already runs a gazebo_ros2_control GazeboSystem in this same gzserver, and
+         a second instance segfaults the server (gazebo_ros2_control cannot be
+         loaded twice in one Gazebo Classic process). The mixer motion is purely
+         kinematic (joint angles computed by planetary_kinematics_node), so we drive
+         the joints directly with libgazebo_ros_joint_pose_trajectory instead.
+         Subscribes (namespaced): /mixer/set_joint_trajectory (trajectory_msgs/JointTrajectory). -->
+    <plugin name="mixer_joint_pose_trajectory" filename="libgazebo_ros_joint_pose_trajectory.so">
       <ros>
         <namespace>/mixer</namespace>
       </ros>
+      <update_rate>50</update_rate>
     </plugin>
-
-    <ros2_control name="mixer_planetary_system" type="system">
-      <hardware>
-        <plugin>gazebo_ros2_control/GazeboSystem</plugin>
-      </hardware>
-
-      <joint name="sun_joint">
-        <command_interface name="position"/>
-        <state_interface name="position"/>
-        <state_interface name="velocity"/>
-      </joint>
-
-      <joint name="shroud_joint">
-        <command_interface name="position"/>
-        <state_interface name="position"/>
-        <state_interface name="velocity"/>
-      </joint>
-
-      <joint name="planet_1_orbit_joint">
-        <command_interface name="position"/>
-        <state_interface name="position"/>
-        <state_interface name="velocity"/>
-      </joint>
-
-      <joint name="planet_1_spin_joint">
-        <command_interface name="position"/>
-        <state_interface name="position"/>
-        <state_interface name="velocity"/>
-      </joint>
-
-      <joint name="planet_2_orbit_joint">
-        <command_interface name="position"/>
-        <state_interface name="position"/>
-        <state_interface name="velocity"/>
-      </joint>
-
-      <joint name="planet_2_spin_joint">
-        <command_interface name="position"/>
-        <state_interface name="position"/>
-        <state_interface name="velocity"/>
-      </joint>
-    </ros2_control>
 
   </model>
 </sdf>
