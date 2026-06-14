@@ -15,15 +15,16 @@ Subscribes:
     /mixer/sun_joint_cmd      - Float64 direct command (optional)
 
 Publishes:
-    /mixer/joint_states                           - for RViz visualization
-    /mixer/forward_position_controller/commands   - ros2_control position command array
+    /mixer/joint_states           - for RViz visualization (-> robot_state_publisher TF)
+    /mixer/set_joint_trajectory   - kinematic joint command for Gazebo
+                                    (libgazebo_ros_joint_pose_trajectory)
 """
 
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64
-from std_msgs.msg import Float64MultiArray
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 # Gear constants
 T_SUN = 4
@@ -52,8 +53,9 @@ class PlanetaryKinematicsNode(Node):
         # RViz state output
         self.joint_state_pub = self.create_publisher(JointState, "/mixer/joint_states", 10)
 
+        # Kinematic command for Gazebo (libgazebo_ros_joint_pose_trajectory).
         self.gazebo_cmd_pub = self.create_publisher(
-            Float64MultiArray, "/mixer/forward_position_controller/commands", 10
+            JointTrajectory, "/mixer/set_joint_trajectory", 10
         )
 
         # Inputs
@@ -70,7 +72,7 @@ class PlanetaryKinematicsNode(Node):
         self.get_logger().info(f"  orbit  = {ORBIT_MULT:+.4f} * theta_sun")
         self.get_logger().info(f"  spin   = {SPIN_MULT:+.4f} * theta_sun")
         self.get_logger().info(
-            "Publishes -> /mixer/joint_states + /mixer/forward_position_controller/commands"
+            "Publishes -> /mixer/joint_states + /mixer/set_joint_trajectory"
         )
         self.get_logger().info("=" * 58)
 
@@ -105,9 +107,22 @@ class PlanetaryKinematicsNode(Node):
         js.effort = [0.0] * len(JOINT_NAMES)
         self.joint_state_pub.publish(js)
 
-        cmd = Float64MultiArray()
-        cmd.data = [float(p) for p in positions]
-        self.gazebo_cmd_pub.publish(cmd)
+        # Single-point trajectory: libgazebo_ros_joint_pose_trajectory sets the
+        # joints to these angles. Streaming at the timer rate gives smooth motion.
+        traj = JointTrajectory()
+        traj.header.stamp = self.get_clock().now().to_msg()
+        # Reference link the plugin holds fixed while setting joints. Must be the
+        # SCOPED Gazebo name: the plugin resolves the model from this link via
+        # world->EntityByName(), and a bare "base_link" is ambiguous (the arm has
+        # one too) -> it would pick the arm and fail to find the mixer joints.
+        traj.header.frame_id = "planetary_mixer::base_link"
+        traj.joint_names = JOINT_NAMES
+        point = JointTrajectoryPoint()
+        point.positions = [float(p) for p in positions]
+        point.time_from_start.sec = 0
+        point.time_from_start.nanosec = 0
+        traj.points = [point]
+        self.gazebo_cmd_pub.publish(traj)
 
 
 def main():
