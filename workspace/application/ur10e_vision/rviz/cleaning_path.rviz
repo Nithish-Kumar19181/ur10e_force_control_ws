@@ -1,0 +1,40 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Global Options:
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: false
+      Marker Scale: 0.1
+    - Class: rviz_default_plugins/PointCloud2
+      Name: SurfaceCloud
+      Enabled: true
+      Topic:
+        Value: /ur10e_vision/surface_cloud
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Size (m): 0.005
+      Style: Points
+      Color Transformer: AxisColor
+    - Class: rviz_default_plugins/MarkerArray
+      Name: PathMarkers
+      Enabled: true
+      Topic:
+        Value: /ur10e_vision/path_markers
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 2.0
+      Name: Current View

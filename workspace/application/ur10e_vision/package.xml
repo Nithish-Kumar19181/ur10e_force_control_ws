@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>ur10e_vision</name>
+  <version>0.0.0</version>
+  <description>RGB-D surface-cleaning path generation for the vertical mixer blades:
+    crops the camera feed to a central ROI, isolates the nearest blade surface,
+    estimates normals (cloud PCA with CAD fallback) and emits a horizontal raster
+    cleaning path as base_link waypoints (PoseArray + TF + markers).</description>
+  <maintainer email="nith600e@gmail.com">nithish</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Node A: cloud_processor (C++ / PCL) -->
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_sensor_msgs</depend>
+  <depend>pcl_ros</depend>
+  <depend>pcl_conversions</depend>
+  <depend>libpcl-all-dev</depend>
+  <depend>eigen</depend>
+
+  <!-- Node B: path_generator (Python / Open3D) -->
+  <depend>rclpy</depend>
+  <depend>visualization_msgs</depend>
+  <depend>ament_index_python</depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>tf_transformations</exec_depend>
+  <!-- Open3D is required at runtime; install python3-open3d on Ubuntu 22.04 / Humble. -->
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

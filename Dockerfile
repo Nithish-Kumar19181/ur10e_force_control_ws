@@ -50,6 +50,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     ros-$ROS_DISTRO-controller-manager \
     ros-$ROS_DISTRO-eigen-stl-containers \
     libeigen3-dev \
+    python3-open3d \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Workspace ─────────────────────────────────────────────────────────────────

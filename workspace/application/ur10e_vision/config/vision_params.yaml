@@ -1,0 +1,73 @@
+# ---------------------------------------------------------------------------
+# ur10e_vision — surface cleaning path generation parameters
+# ---------------------------------------------------------------------------
+
+# Node A: organized RGB-D cloud -> cropped, filtered, isolated surface cloud
+cloud_processor:
+  ros__parameters:
+    # Input organized PointCloud2 from the simulated D435i depth camera.
+    # Verify at runtime with `ros2 topic list` (libgazebo_ros_camera with
+    # namespace=camera, camera_name=camera -> /camera/camera/points).
+    input_cloud_topic: "/camera/camera/points"
+
+    # Frame the isolated surface cloud is published in (downstream waypoints).
+    output_frame: "base_link"
+
+    # Capture the first frame automatically on startup instead of waiting for
+    # the /ur10e_vision/trigger service. Default: trigger-driven one-shot.
+    capture_on_start: false
+
+    # Central crop expressed as a fraction of the image AREA (0.75 => a centered
+    # box ~86.6% of width and height). Whatever surface lands in this ROI is the
+    # cleaning target.
+    crop_area_fraction: 0.75
+
+    # Depth band passthrough (metres, along camera optical Z) applied before
+    # clustering to drop near-sensor noise and far background.
+    depth_min: 0.15
+    depth_max: 3.0
+
+    # Statistical outlier removal.
+    sor_mean_k: 30
+    sor_stddev_mul: 1.0
+
+    # Euclidean clustering -> keep the NEAREST large connected component.
+    cluster_tolerance: 0.02   # m
+    min_cluster_size: 200
+    max_cluster_size: 1000000
+
+    # TF lookup timeout (s) for camera_optical_frame -> output_frame.
+    tf_timeout: 1.0
+
+# Node B: surface cloud -> raster cleaning path (PoseArray + TF + markers)
+path_generator:
+  ros__parameters:
+    surface_cloud_topic: "/ur10e_vision/surface_cloud"
+    roi_info_topic: "/ur10e_vision/roi"
+    output_frame: "base_link"
+
+    # Raster geometry.
+    raster_direction: "horizontal"  # horizontal passes, stepping vertically
+    tool_width: 0.05                # m, pass-to-pass pitch (vertical step)
+    waypoint_spacing: 0.02          # m, along-pass spacing
+    standoff: 0.05                   # m, offset along +normal (away from surface)
+
+    # Orientation: tool +Z = approach_axis_sign * normal. -1 => Z into surface.
+    approach_axis_sign: -1.0
+
+    # Normal estimation (Open3D PCA over k nearest neighbours / radius).
+    normal_knn: 30
+    normal_radius: 0.03
+
+    # CAD fallback: register a blade STL to the cloud (ICP) and sample CAD
+    # normals where the live cloud is too sparse to give a reliable PCA normal.
+    enable_cad_fallback: true
+    cad_mesh_package: "ur10e_simulation_pkg"
+    cad_mesh_subdir: "meshes"
+    cad_mesh_files: ["blade_1.stl", "blade_2.stl", "middle_blade.stl"]
+    icp_max_correspondence: 0.05    # m
+    icp_fitness_min: 0.3            # min fitness to accept a CAD registration
+
+    # Publish a TF frame per waypoint (clean_wp_000, clean_wp_001, ...).
+    publish_waypoint_tf: true
+    waypoint_tf_prefix: "clean_wp_"
