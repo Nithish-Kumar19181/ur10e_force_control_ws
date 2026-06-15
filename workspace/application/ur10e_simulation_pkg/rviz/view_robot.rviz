@@ -1269,152 +1269,6 @@ Visualization Manager:
           Value: true
         clean_wp_398:
           Value: true
-        clean_wp_399:
-          Value: true
-        clean_wp_400:
-          Value: true
-        clean_wp_401:
-          Value: true
-        clean_wp_402:
-          Value: true
-        clean_wp_403:
-          Value: true
-        clean_wp_404:
-          Value: true
-        clean_wp_405:
-          Value: true
-        clean_wp_406:
-          Value: true
-        clean_wp_407:
-          Value: true
-        clean_wp_408:
-          Value: true
-        clean_wp_409:
-          Value: true
-        clean_wp_410:
-          Value: true
-        clean_wp_411:
-          Value: true
-        clean_wp_412:
-          Value: true
-        clean_wp_413:
-          Value: true
-        clean_wp_414:
-          Value: true
-        clean_wp_415:
-          Value: true
-        clean_wp_416:
-          Value: true
-        clean_wp_417:
-          Value: true
-        clean_wp_418:
-          Value: true
-        clean_wp_419:
-          Value: true
-        clean_wp_420:
-          Value: true
-        clean_wp_421:
-          Value: true
-        clean_wp_422:
-          Value: true
-        clean_wp_423:
-          Value: true
-        clean_wp_424:
-          Value: true
-        clean_wp_425:
-          Value: true
-        clean_wp_426:
-          Value: true
-        clean_wp_427:
-          Value: true
-        clean_wp_428:
-          Value: true
-        clean_wp_429:
-          Value: true
-        clean_wp_430:
-          Value: true
-        clean_wp_431:
-          Value: true
-        clean_wp_432:
-          Value: true
-        clean_wp_433:
-          Value: true
-        clean_wp_434:
-          Value: true
-        clean_wp_435:
-          Value: true
-        clean_wp_436:
-          Value: true
-        clean_wp_437:
-          Value: true
-        clean_wp_438:
-          Value: true
-        clean_wp_439:
-          Value: true
-        clean_wp_440:
-          Value: true
-        clean_wp_441:
-          Value: true
-        clean_wp_442:
-          Value: true
-        clean_wp_443:
-          Value: true
-        clean_wp_444:
-          Value: true
-        clean_wp_445:
-          Value: true
-        clean_wp_446:
-          Value: true
-        clean_wp_447:
-          Value: true
-        clean_wp_448:
-          Value: true
-        clean_wp_449:
-          Value: true
-        clean_wp_450:
-          Value: true
-        clean_wp_451:
-          Value: true
-        clean_wp_452:
-          Value: true
-        clean_wp_453:
-          Value: true
-        clean_wp_454:
-          Value: true
-        clean_wp_455:
-          Value: true
-        clean_wp_456:
-          Value: true
-        clean_wp_457:
-          Value: true
-        clean_wp_458:
-          Value: true
-        clean_wp_459:
-          Value: true
-        clean_wp_460:
-          Value: true
-        clean_wp_461:
-          Value: true
-        clean_wp_462:
-          Value: true
-        clean_wp_463:
-          Value: true
-        clean_wp_464:
-          Value: true
-        clean_wp_465:
-          Value: true
-        clean_wp_466:
-          Value: true
-        clean_wp_467:
-          Value: true
-        clean_wp_468:
-          Value: true
-        clean_wp_469:
-          Value: true
-        clean_wp_470:
-          Value: true
-        clean_wp_471:
-          Value: true
         end_effector_link:
           Value: true
         flange:
@@ -2296,152 +2150,6 @@ Visualization Manager:
               {}
             clean_wp_398:
               {}
-            clean_wp_399:
-              {}
-            clean_wp_400:
-              {}
-            clean_wp_401:
-              {}
-            clean_wp_402:
-              {}
-            clean_wp_403:
-              {}
-            clean_wp_404:
-              {}
-            clean_wp_405:
-              {}
-            clean_wp_406:
-              {}
-            clean_wp_407:
-              {}
-            clean_wp_408:
-              {}
-            clean_wp_409:
-              {}
-            clean_wp_410:
-              {}
-            clean_wp_411:
-              {}
-            clean_wp_412:
-              {}
-            clean_wp_413:
-              {}
-            clean_wp_414:
-              {}
-            clean_wp_415:
-              {}
-            clean_wp_416:
-              {}
-            clean_wp_417:
-              {}
-            clean_wp_418:
-              {}
-            clean_wp_419:
-              {}
-            clean_wp_420:
-              {}
-            clean_wp_421:
-              {}
-            clean_wp_422:
-              {}
-            clean_wp_423:
-              {}
-            clean_wp_424:
-              {}
-            clean_wp_425:
-              {}
-            clean_wp_426:
-              {}
-            clean_wp_427:
-              {}
-            clean_wp_428:
-              {}
-            clean_wp_429:
-              {}
-            clean_wp_430:
-              {}
-            clean_wp_431:
-              {}
-            clean_wp_432:
-              {}
-            clean_wp_433:
-              {}
-            clean_wp_434:
-              {}
-            clean_wp_435:
-              {}
-            clean_wp_436:
-              {}
-            clean_wp_437:
-              {}
-            clean_wp_438:
-              {}
-            clean_wp_439:
-              {}
-            clean_wp_440:
-              {}
-            clean_wp_441:
-              {}
-            clean_wp_442:
-              {}
-            clean_wp_443:
-              {}
-            clean_wp_444:
-              {}
-            clean_wp_445:
-              {}
-            clean_wp_446:
-              {}
-            clean_wp_447:
-              {}
-            clean_wp_448:
-              {}
-            clean_wp_449:
-              {}
-            clean_wp_450:
-              {}
-            clean_wp_451:
-              {}
-            clean_wp_452:
-              {}
-            clean_wp_453:
-              {}
-            clean_wp_454:
-              {}
-            clean_wp_455:
-              {}
-            clean_wp_456:
-              {}
-            clean_wp_457:
-              {}
-            clean_wp_458:
-              {}
-            clean_wp_459:
-              {}
-            clean_wp_460:
-              {}
-            clean_wp_461:
-              {}
-            clean_wp_462:
-              {}
-            clean_wp_463:
-              {}
-            clean_wp_464:
-              {}
-            clean_wp_465:
-              {}
-            clean_wp_466:
-              {}
-            clean_wp_467:
-              {}
-            clean_wp_468:
-              {}
-            clean_wp_469:
-              {}
-            clean_wp_470:
-              {}
-            clean_wp_471:
-              {}
           ground_plane:
             {}
           mixer_world:
@@ -2504,25 +2212,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.5963454246520996
+      Distance: 1.7047516107559204
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.22461557388305664
-        Y: -0.09625191986560822
-        Z: 0.31481480598449707
+        X: -0.6987574696540833
+        Y: -0.21443872153759003
+        Z: 0.5651320815086365
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.41039806604385376
+      Pitch: 0.37539827823638916
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.5403984785079956
+      Yaw: 5.378581523895264
     Saved: ~
 Window Geometry:
   Displays:

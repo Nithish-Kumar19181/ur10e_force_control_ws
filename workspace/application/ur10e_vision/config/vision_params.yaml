@@ -50,7 +50,7 @@ path_generator:
     raster_direction: "horizontal"  # horizontal passes, stepping vertically
     tool_width: 0.05                # m, pass-to-pass pitch (vertical step)
     waypoint_spacing: 0.02          # m, along-pass spacing
-    standoff: 0.0                   # m, offset along +normal (away from surface)
+    standoff: 0.05                   # m, offset along +normal (away from surface)
 
     # Orientation: tool +Z = approach_axis_sign * normal. -1 => Z into surface.
     approach_axis_sign: -1.0
