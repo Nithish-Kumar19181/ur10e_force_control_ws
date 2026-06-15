@@ -243,15 +243,28 @@ private:
       clusters[best].indices.size(), best_z, clusters.size());
 
     // --- 5. Transform organized cloud into output_frame (NaNs preserved).
+    // The Gazebo organized depth cloud is often stamped a second or two behind
+    // the TF stream, so an exact-stamp lookup extrapolates into the past. For a
+    // static snapshot (arm posed, then triggered) the latest transform is the
+    // correct one; fall back to it when the exact stamp is unavailable.
     geometry_msgs::msg::TransformStamped tf;
     try {
       tf = tf_buffer_->lookupTransform(
         output_frame_, msg->header.frame_id, msg->header.stamp,
         rclcpp::Duration::from_seconds(tf_timeout_));
     } catch (const tf2::TransformException & ex) {
-      RCLCPP_ERROR(get_logger(), "TF %s <- %s failed: %s",
-        output_frame_.c_str(), msg->header.frame_id.c_str(), ex.what());
-      return false;
+      RCLCPP_WARN(get_logger(),
+        "TF at cloud stamp unavailable (%s); using latest transform instead.",
+        ex.what());
+      try {
+        tf = tf_buffer_->lookupTransform(
+          output_frame_, msg->header.frame_id, rclcpp::Time(0, 0, RCL_ROS_TIME),
+          rclcpp::Duration::from_seconds(tf_timeout_));
+      } catch (const tf2::TransformException & ex2) {
+        RCLCPP_ERROR(get_logger(), "TF %s <- %s failed: %s",
+          output_frame_.c_str(), msg->header.frame_id.c_str(), ex2.what());
+        return false;
+      }
     }
     const Eigen::Affine3d a = tf2::transformToEigen(tf);
     auto out = std::make_shared<CloudT>();

@@ -6,8 +6,9 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /TF1/Frames1
       Splitter Ratio: 0.5
-    Tree Height: 121
+    Tree Height: 118
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -431,6 +432,2032 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /camera/camera/image_raw
       Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+        base:
+          Value: false
+        base_link:
+          Value: false
+        base_link_inertia:
+          Value: true
+        camera_accel_frame:
+          Value: true
+        camera_accel_optical_frame:
+          Value: true
+        camera_bottom_screw_frame:
+          Value: true
+        camera_color_frame:
+          Value: true
+        camera_color_optical_frame:
+          Value: true
+        camera_depth_frame:
+          Value: true
+        camera_depth_optical_frame:
+          Value: true
+        camera_gyro_frame:
+          Value: true
+        camera_gyro_optical_frame:
+          Value: true
+        camera_infra1_frame:
+          Value: true
+        camera_infra1_optical_frame:
+          Value: true
+        camera_infra2_frame:
+          Value: true
+        camera_infra2_optical_frame:
+          Value: true
+        camera_link:
+          Value: true
+        clean_wp_000:
+          Value: true
+        clean_wp_001:
+          Value: true
+        clean_wp_002:
+          Value: true
+        clean_wp_003:
+          Value: true
+        clean_wp_004:
+          Value: true
+        clean_wp_005:
+          Value: true
+        clean_wp_006:
+          Value: true
+        clean_wp_007:
+          Value: true
+        clean_wp_008:
+          Value: true
+        clean_wp_009:
+          Value: true
+        clean_wp_010:
+          Value: true
+        clean_wp_011:
+          Value: true
+        clean_wp_012:
+          Value: true
+        clean_wp_013:
+          Value: true
+        clean_wp_014:
+          Value: true
+        clean_wp_015:
+          Value: true
+        clean_wp_016:
+          Value: true
+        clean_wp_017:
+          Value: true
+        clean_wp_018:
+          Value: true
+        clean_wp_019:
+          Value: true
+        clean_wp_020:
+          Value: true
+        clean_wp_021:
+          Value: true
+        clean_wp_022:
+          Value: true
+        clean_wp_023:
+          Value: true
+        clean_wp_024:
+          Value: true
+        clean_wp_025:
+          Value: true
+        clean_wp_026:
+          Value: true
+        clean_wp_027:
+          Value: true
+        clean_wp_028:
+          Value: true
+        clean_wp_029:
+          Value: true
+        clean_wp_030:
+          Value: true
+        clean_wp_031:
+          Value: true
+        clean_wp_032:
+          Value: true
+        clean_wp_033:
+          Value: true
+        clean_wp_034:
+          Value: true
+        clean_wp_035:
+          Value: true
+        clean_wp_036:
+          Value: true
+        clean_wp_037:
+          Value: true
+        clean_wp_038:
+          Value: true
+        clean_wp_039:
+          Value: true
+        clean_wp_040:
+          Value: true
+        clean_wp_041:
+          Value: true
+        clean_wp_042:
+          Value: true
+        clean_wp_043:
+          Value: true
+        clean_wp_044:
+          Value: true
+        clean_wp_045:
+          Value: true
+        clean_wp_046:
+          Value: true
+        clean_wp_047:
+          Value: true
+        clean_wp_048:
+          Value: true
+        clean_wp_049:
+          Value: true
+        clean_wp_050:
+          Value: true
+        clean_wp_051:
+          Value: true
+        clean_wp_052:
+          Value: true
+        clean_wp_053:
+          Value: true
+        clean_wp_054:
+          Value: true
+        clean_wp_055:
+          Value: true
+        clean_wp_056:
+          Value: true
+        clean_wp_057:
+          Value: true
+        clean_wp_058:
+          Value: true
+        clean_wp_059:
+          Value: true
+        clean_wp_060:
+          Value: true
+        clean_wp_061:
+          Value: true
+        clean_wp_062:
+          Value: true
+        clean_wp_063:
+          Value: true
+        clean_wp_064:
+          Value: true
+        clean_wp_065:
+          Value: true
+        clean_wp_066:
+          Value: true
+        clean_wp_067:
+          Value: true
+        clean_wp_068:
+          Value: true
+        clean_wp_069:
+          Value: true
+        clean_wp_070:
+          Value: true
+        clean_wp_071:
+          Value: true
+        clean_wp_072:
+          Value: true
+        clean_wp_073:
+          Value: true
+        clean_wp_074:
+          Value: true
+        clean_wp_075:
+          Value: true
+        clean_wp_076:
+          Value: true
+        clean_wp_077:
+          Value: true
+        clean_wp_078:
+          Value: true
+        clean_wp_079:
+          Value: true
+        clean_wp_080:
+          Value: true
+        clean_wp_081:
+          Value: true
+        clean_wp_082:
+          Value: true
+        clean_wp_083:
+          Value: true
+        clean_wp_084:
+          Value: true
+        clean_wp_085:
+          Value: true
+        clean_wp_086:
+          Value: true
+        clean_wp_087:
+          Value: true
+        clean_wp_088:
+          Value: true
+        clean_wp_089:
+          Value: true
+        clean_wp_090:
+          Value: true
+        clean_wp_091:
+          Value: true
+        clean_wp_092:
+          Value: true
+        clean_wp_093:
+          Value: true
+        clean_wp_094:
+          Value: true
+        clean_wp_095:
+          Value: true
+        clean_wp_096:
+          Value: true
+        clean_wp_097:
+          Value: true
+        clean_wp_098:
+          Value: true
+        clean_wp_099:
+          Value: true
+        clean_wp_100:
+          Value: true
+        clean_wp_101:
+          Value: true
+        clean_wp_102:
+          Value: true
+        clean_wp_103:
+          Value: true
+        clean_wp_104:
+          Value: true
+        clean_wp_105:
+          Value: true
+        clean_wp_106:
+          Value: true
+        clean_wp_107:
+          Value: true
+        clean_wp_108:
+          Value: true
+        clean_wp_109:
+          Value: true
+        clean_wp_110:
+          Value: true
+        clean_wp_111:
+          Value: true
+        clean_wp_112:
+          Value: true
+        clean_wp_113:
+          Value: true
+        clean_wp_114:
+          Value: true
+        clean_wp_115:
+          Value: true
+        clean_wp_116:
+          Value: true
+        clean_wp_117:
+          Value: true
+        clean_wp_118:
+          Value: true
+        clean_wp_119:
+          Value: true
+        clean_wp_120:
+          Value: true
+        clean_wp_121:
+          Value: true
+        clean_wp_122:
+          Value: true
+        clean_wp_123:
+          Value: true
+        clean_wp_124:
+          Value: true
+        clean_wp_125:
+          Value: true
+        clean_wp_126:
+          Value: true
+        clean_wp_127:
+          Value: true
+        clean_wp_128:
+          Value: true
+        clean_wp_129:
+          Value: true
+        clean_wp_130:
+          Value: true
+        clean_wp_131:
+          Value: true
+        clean_wp_132:
+          Value: true
+        clean_wp_133:
+          Value: true
+        clean_wp_134:
+          Value: true
+        clean_wp_135:
+          Value: true
+        clean_wp_136:
+          Value: true
+        clean_wp_137:
+          Value: true
+        clean_wp_138:
+          Value: true
+        clean_wp_139:
+          Value: true
+        clean_wp_140:
+          Value: true
+        clean_wp_141:
+          Value: true
+        clean_wp_142:
+          Value: true
+        clean_wp_143:
+          Value: true
+        clean_wp_144:
+          Value: true
+        clean_wp_145:
+          Value: true
+        clean_wp_146:
+          Value: true
+        clean_wp_147:
+          Value: true
+        clean_wp_148:
+          Value: true
+        clean_wp_149:
+          Value: true
+        clean_wp_150:
+          Value: true
+        clean_wp_151:
+          Value: true
+        clean_wp_152:
+          Value: true
+        clean_wp_153:
+          Value: true
+        clean_wp_154:
+          Value: true
+        clean_wp_155:
+          Value: true
+        clean_wp_156:
+          Value: true
+        clean_wp_157:
+          Value: true
+        clean_wp_158:
+          Value: true
+        clean_wp_159:
+          Value: true
+        clean_wp_160:
+          Value: true
+        clean_wp_161:
+          Value: true
+        clean_wp_162:
+          Value: true
+        clean_wp_163:
+          Value: true
+        clean_wp_164:
+          Value: true
+        clean_wp_165:
+          Value: true
+        clean_wp_166:
+          Value: true
+        clean_wp_167:
+          Value: true
+        clean_wp_168:
+          Value: true
+        clean_wp_169:
+          Value: true
+        clean_wp_170:
+          Value: true
+        clean_wp_171:
+          Value: true
+        clean_wp_172:
+          Value: true
+        clean_wp_173:
+          Value: true
+        clean_wp_174:
+          Value: true
+        clean_wp_175:
+          Value: true
+        clean_wp_176:
+          Value: true
+        clean_wp_177:
+          Value: true
+        clean_wp_178:
+          Value: true
+        clean_wp_179:
+          Value: true
+        clean_wp_180:
+          Value: true
+        clean_wp_181:
+          Value: true
+        clean_wp_182:
+          Value: true
+        clean_wp_183:
+          Value: true
+        clean_wp_184:
+          Value: true
+        clean_wp_185:
+          Value: true
+        clean_wp_186:
+          Value: true
+        clean_wp_187:
+          Value: true
+        clean_wp_188:
+          Value: true
+        clean_wp_189:
+          Value: true
+        clean_wp_190:
+          Value: true
+        clean_wp_191:
+          Value: true
+        clean_wp_192:
+          Value: true
+        clean_wp_193:
+          Value: true
+        clean_wp_194:
+          Value: true
+        clean_wp_195:
+          Value: true
+        clean_wp_196:
+          Value: true
+        clean_wp_197:
+          Value: true
+        clean_wp_198:
+          Value: true
+        clean_wp_199:
+          Value: true
+        clean_wp_200:
+          Value: true
+        clean_wp_201:
+          Value: true
+        clean_wp_202:
+          Value: true
+        clean_wp_203:
+          Value: true
+        clean_wp_204:
+          Value: true
+        clean_wp_205:
+          Value: true
+        clean_wp_206:
+          Value: true
+        clean_wp_207:
+          Value: true
+        clean_wp_208:
+          Value: true
+        clean_wp_209:
+          Value: true
+        clean_wp_210:
+          Value: true
+        clean_wp_211:
+          Value: true
+        clean_wp_212:
+          Value: true
+        clean_wp_213:
+          Value: true
+        clean_wp_214:
+          Value: true
+        clean_wp_215:
+          Value: true
+        clean_wp_216:
+          Value: true
+        clean_wp_217:
+          Value: true
+        clean_wp_218:
+          Value: true
+        clean_wp_219:
+          Value: true
+        clean_wp_220:
+          Value: true
+        clean_wp_221:
+          Value: true
+        clean_wp_222:
+          Value: true
+        clean_wp_223:
+          Value: true
+        clean_wp_224:
+          Value: true
+        clean_wp_225:
+          Value: true
+        clean_wp_226:
+          Value: true
+        clean_wp_227:
+          Value: true
+        clean_wp_228:
+          Value: true
+        clean_wp_229:
+          Value: true
+        clean_wp_230:
+          Value: true
+        clean_wp_231:
+          Value: true
+        clean_wp_232:
+          Value: true
+        clean_wp_233:
+          Value: true
+        clean_wp_234:
+          Value: true
+        clean_wp_235:
+          Value: true
+        clean_wp_236:
+          Value: true
+        clean_wp_237:
+          Value: true
+        clean_wp_238:
+          Value: true
+        clean_wp_239:
+          Value: true
+        clean_wp_240:
+          Value: true
+        clean_wp_241:
+          Value: true
+        clean_wp_242:
+          Value: true
+        clean_wp_243:
+          Value: true
+        clean_wp_244:
+          Value: true
+        clean_wp_245:
+          Value: true
+        clean_wp_246:
+          Value: true
+        clean_wp_247:
+          Value: true
+        clean_wp_248:
+          Value: true
+        clean_wp_249:
+          Value: true
+        clean_wp_250:
+          Value: true
+        clean_wp_251:
+          Value: true
+        clean_wp_252:
+          Value: true
+        clean_wp_253:
+          Value: true
+        clean_wp_254:
+          Value: true
+        clean_wp_255:
+          Value: true
+        clean_wp_256:
+          Value: true
+        clean_wp_257:
+          Value: true
+        clean_wp_258:
+          Value: true
+        clean_wp_259:
+          Value: true
+        clean_wp_260:
+          Value: true
+        clean_wp_261:
+          Value: true
+        clean_wp_262:
+          Value: true
+        clean_wp_263:
+          Value: true
+        clean_wp_264:
+          Value: true
+        clean_wp_265:
+          Value: true
+        clean_wp_266:
+          Value: true
+        clean_wp_267:
+          Value: true
+        clean_wp_268:
+          Value: true
+        clean_wp_269:
+          Value: true
+        clean_wp_270:
+          Value: true
+        clean_wp_271:
+          Value: true
+        clean_wp_272:
+          Value: true
+        clean_wp_273:
+          Value: true
+        clean_wp_274:
+          Value: true
+        clean_wp_275:
+          Value: true
+        clean_wp_276:
+          Value: true
+        clean_wp_277:
+          Value: true
+        clean_wp_278:
+          Value: true
+        clean_wp_279:
+          Value: true
+        clean_wp_280:
+          Value: true
+        clean_wp_281:
+          Value: true
+        clean_wp_282:
+          Value: true
+        clean_wp_283:
+          Value: true
+        clean_wp_284:
+          Value: true
+        clean_wp_285:
+          Value: true
+        clean_wp_286:
+          Value: true
+        clean_wp_287:
+          Value: true
+        clean_wp_288:
+          Value: true
+        clean_wp_289:
+          Value: true
+        clean_wp_290:
+          Value: true
+        clean_wp_291:
+          Value: true
+        clean_wp_292:
+          Value: true
+        clean_wp_293:
+          Value: true
+        clean_wp_294:
+          Value: true
+        clean_wp_295:
+          Value: true
+        clean_wp_296:
+          Value: true
+        clean_wp_297:
+          Value: true
+        clean_wp_298:
+          Value: true
+        clean_wp_299:
+          Value: true
+        clean_wp_300:
+          Value: true
+        clean_wp_301:
+          Value: true
+        clean_wp_302:
+          Value: true
+        clean_wp_303:
+          Value: true
+        clean_wp_304:
+          Value: true
+        clean_wp_305:
+          Value: true
+        clean_wp_306:
+          Value: true
+        clean_wp_307:
+          Value: true
+        clean_wp_308:
+          Value: true
+        clean_wp_309:
+          Value: true
+        clean_wp_310:
+          Value: true
+        clean_wp_311:
+          Value: true
+        clean_wp_312:
+          Value: true
+        clean_wp_313:
+          Value: true
+        clean_wp_314:
+          Value: true
+        clean_wp_315:
+          Value: true
+        clean_wp_316:
+          Value: true
+        clean_wp_317:
+          Value: true
+        clean_wp_318:
+          Value: true
+        clean_wp_319:
+          Value: true
+        clean_wp_320:
+          Value: true
+        clean_wp_321:
+          Value: true
+        clean_wp_322:
+          Value: true
+        clean_wp_323:
+          Value: true
+        clean_wp_324:
+          Value: true
+        clean_wp_325:
+          Value: true
+        clean_wp_326:
+          Value: true
+        clean_wp_327:
+          Value: true
+        clean_wp_328:
+          Value: true
+        clean_wp_329:
+          Value: true
+        clean_wp_330:
+          Value: true
+        clean_wp_331:
+          Value: true
+        clean_wp_332:
+          Value: true
+        clean_wp_333:
+          Value: true
+        clean_wp_334:
+          Value: true
+        clean_wp_335:
+          Value: true
+        clean_wp_336:
+          Value: true
+        clean_wp_337:
+          Value: true
+        clean_wp_338:
+          Value: true
+        clean_wp_339:
+          Value: true
+        clean_wp_340:
+          Value: true
+        clean_wp_341:
+          Value: true
+        clean_wp_342:
+          Value: true
+        clean_wp_343:
+          Value: true
+        clean_wp_344:
+          Value: true
+        clean_wp_345:
+          Value: true
+        clean_wp_346:
+          Value: true
+        clean_wp_347:
+          Value: true
+        clean_wp_348:
+          Value: true
+        clean_wp_349:
+          Value: true
+        clean_wp_350:
+          Value: true
+        clean_wp_351:
+          Value: true
+        clean_wp_352:
+          Value: true
+        clean_wp_353:
+          Value: true
+        clean_wp_354:
+          Value: true
+        clean_wp_355:
+          Value: true
+        clean_wp_356:
+          Value: true
+        clean_wp_357:
+          Value: true
+        clean_wp_358:
+          Value: true
+        clean_wp_359:
+          Value: true
+        clean_wp_360:
+          Value: true
+        clean_wp_361:
+          Value: true
+        clean_wp_362:
+          Value: true
+        clean_wp_363:
+          Value: true
+        clean_wp_364:
+          Value: true
+        clean_wp_365:
+          Value: true
+        clean_wp_366:
+          Value: true
+        clean_wp_367:
+          Value: true
+        clean_wp_368:
+          Value: true
+        clean_wp_369:
+          Value: true
+        clean_wp_370:
+          Value: true
+        clean_wp_371:
+          Value: true
+        clean_wp_372:
+          Value: true
+        clean_wp_373:
+          Value: true
+        clean_wp_374:
+          Value: true
+        clean_wp_375:
+          Value: true
+        clean_wp_376:
+          Value: true
+        clean_wp_377:
+          Value: true
+        clean_wp_378:
+          Value: true
+        clean_wp_379:
+          Value: true
+        clean_wp_380:
+          Value: true
+        clean_wp_381:
+          Value: true
+        clean_wp_382:
+          Value: true
+        clean_wp_383:
+          Value: true
+        clean_wp_384:
+          Value: true
+        clean_wp_385:
+          Value: true
+        clean_wp_386:
+          Value: true
+        clean_wp_387:
+          Value: true
+        clean_wp_388:
+          Value: true
+        clean_wp_389:
+          Value: true
+        clean_wp_390:
+          Value: true
+        clean_wp_391:
+          Value: true
+        clean_wp_392:
+          Value: true
+        clean_wp_393:
+          Value: true
+        clean_wp_394:
+          Value: true
+        clean_wp_395:
+          Value: true
+        clean_wp_396:
+          Value: true
+        clean_wp_397:
+          Value: true
+        clean_wp_398:
+          Value: true
+        clean_wp_399:
+          Value: true
+        clean_wp_400:
+          Value: true
+        clean_wp_401:
+          Value: true
+        clean_wp_402:
+          Value: true
+        clean_wp_403:
+          Value: true
+        clean_wp_404:
+          Value: true
+        clean_wp_405:
+          Value: true
+        clean_wp_406:
+          Value: true
+        clean_wp_407:
+          Value: true
+        clean_wp_408:
+          Value: true
+        clean_wp_409:
+          Value: true
+        clean_wp_410:
+          Value: true
+        clean_wp_411:
+          Value: true
+        clean_wp_412:
+          Value: true
+        clean_wp_413:
+          Value: true
+        clean_wp_414:
+          Value: true
+        clean_wp_415:
+          Value: true
+        clean_wp_416:
+          Value: true
+        clean_wp_417:
+          Value: true
+        clean_wp_418:
+          Value: true
+        clean_wp_419:
+          Value: true
+        clean_wp_420:
+          Value: true
+        clean_wp_421:
+          Value: true
+        clean_wp_422:
+          Value: true
+        clean_wp_423:
+          Value: true
+        clean_wp_424:
+          Value: true
+        clean_wp_425:
+          Value: true
+        clean_wp_426:
+          Value: true
+        clean_wp_427:
+          Value: true
+        clean_wp_428:
+          Value: true
+        clean_wp_429:
+          Value: true
+        clean_wp_430:
+          Value: true
+        clean_wp_431:
+          Value: true
+        clean_wp_432:
+          Value: true
+        clean_wp_433:
+          Value: true
+        clean_wp_434:
+          Value: true
+        clean_wp_435:
+          Value: true
+        clean_wp_436:
+          Value: true
+        clean_wp_437:
+          Value: true
+        clean_wp_438:
+          Value: true
+        clean_wp_439:
+          Value: true
+        clean_wp_440:
+          Value: true
+        clean_wp_441:
+          Value: true
+        clean_wp_442:
+          Value: true
+        clean_wp_443:
+          Value: true
+        clean_wp_444:
+          Value: true
+        clean_wp_445:
+          Value: true
+        clean_wp_446:
+          Value: true
+        clean_wp_447:
+          Value: true
+        clean_wp_448:
+          Value: true
+        clean_wp_449:
+          Value: true
+        clean_wp_450:
+          Value: true
+        clean_wp_451:
+          Value: true
+        clean_wp_452:
+          Value: true
+        clean_wp_453:
+          Value: true
+        clean_wp_454:
+          Value: true
+        clean_wp_455:
+          Value: true
+        clean_wp_456:
+          Value: true
+        clean_wp_457:
+          Value: true
+        clean_wp_458:
+          Value: true
+        clean_wp_459:
+          Value: true
+        clean_wp_460:
+          Value: true
+        clean_wp_461:
+          Value: true
+        clean_wp_462:
+          Value: true
+        clean_wp_463:
+          Value: true
+        clean_wp_464:
+          Value: true
+        clean_wp_465:
+          Value: true
+        clean_wp_466:
+          Value: true
+        clean_wp_467:
+          Value: true
+        clean_wp_468:
+          Value: true
+        clean_wp_469:
+          Value: true
+        clean_wp_470:
+          Value: true
+        clean_wp_471:
+          Value: true
+        end_effector_link:
+          Value: true
+        flange:
+          Value: true
+        forearm_link:
+          Value: true
+        ft_frame:
+          Value: false
+        ground_plane:
+          Value: false
+        mixer_base_link:
+          Value: false
+        mixer_planet_1_carrier:
+          Value: false
+        mixer_planet_1_link:
+          Value: false
+        mixer_planet_2_carrier:
+          Value: false
+        mixer_planet_2_link:
+          Value: false
+        mixer_shroud_link:
+          Value: false
+        mixer_sun_link:
+          Value: false
+        mixer_world:
+          Value: false
+        shoulder_link:
+          Value: false
+        tool0:
+          Value: true
+        upper_arm_link:
+          Value: true
+        world:
+          Value: true
+        wrist_1_link:
+          Value: true
+        wrist_2_link:
+          Value: true
+        wrist_3_link:
+          Value: true
+      Marker Scale: 0.25
+      Name: TF
+      Show Arrows: false
+      Show Axes: true
+      Show Names: false
+      Tree:
+        world:
+          base_link:
+            base:
+              {}
+            base_link_inertia:
+              shoulder_link:
+                upper_arm_link:
+                  forearm_link:
+                    wrist_1_link:
+                      wrist_2_link:
+                        wrist_3_link:
+                          flange:
+                            tool0:
+                              camera_bottom_screw_frame:
+                                camera_link:
+                                  camera_accel_frame:
+                                    camera_accel_optical_frame:
+                                      {}
+                                  camera_color_frame:
+                                    camera_color_optical_frame:
+                                      {}
+                                  camera_depth_frame:
+                                    camera_depth_optical_frame:
+                                      {}
+                                  camera_gyro_frame:
+                                    camera_gyro_optical_frame:
+                                      {}
+                                  camera_infra1_frame:
+                                    camera_infra1_optical_frame:
+                                      {}
+                                  camera_infra2_frame:
+                                    camera_infra2_optical_frame:
+                                      {}
+                              end_effector_link:
+                                {}
+                          ft_frame:
+                            {}
+            clean_wp_000:
+              {}
+            clean_wp_001:
+              {}
+            clean_wp_002:
+              {}
+            clean_wp_003:
+              {}
+            clean_wp_004:
+              {}
+            clean_wp_005:
+              {}
+            clean_wp_006:
+              {}
+            clean_wp_007:
+              {}
+            clean_wp_008:
+              {}
+            clean_wp_009:
+              {}
+            clean_wp_010:
+              {}
+            clean_wp_011:
+              {}
+            clean_wp_012:
+              {}
+            clean_wp_013:
+              {}
+            clean_wp_014:
+              {}
+            clean_wp_015:
+              {}
+            clean_wp_016:
+              {}
+            clean_wp_017:
+              {}
+            clean_wp_018:
+              {}
+            clean_wp_019:
+              {}
+            clean_wp_020:
+              {}
+            clean_wp_021:
+              {}
+            clean_wp_022:
+              {}
+            clean_wp_023:
+              {}
+            clean_wp_024:
+              {}
+            clean_wp_025:
+              {}
+            clean_wp_026:
+              {}
+            clean_wp_027:
+              {}
+            clean_wp_028:
+              {}
+            clean_wp_029:
+              {}
+            clean_wp_030:
+              {}
+            clean_wp_031:
+              {}
+            clean_wp_032:
+              {}
+            clean_wp_033:
+              {}
+            clean_wp_034:
+              {}
+            clean_wp_035:
+              {}
+            clean_wp_036:
+              {}
+            clean_wp_037:
+              {}
+            clean_wp_038:
+              {}
+            clean_wp_039:
+              {}
+            clean_wp_040:
+              {}
+            clean_wp_041:
+              {}
+            clean_wp_042:
+              {}
+            clean_wp_043:
+              {}
+            clean_wp_044:
+              {}
+            clean_wp_045:
+              {}
+            clean_wp_046:
+              {}
+            clean_wp_047:
+              {}
+            clean_wp_048:
+              {}
+            clean_wp_049:
+              {}
+            clean_wp_050:
+              {}
+            clean_wp_051:
+              {}
+            clean_wp_052:
+              {}
+            clean_wp_053:
+              {}
+            clean_wp_054:
+              {}
+            clean_wp_055:
+              {}
+            clean_wp_056:
+              {}
+            clean_wp_057:
+              {}
+            clean_wp_058:
+              {}
+            clean_wp_059:
+              {}
+            clean_wp_060:
+              {}
+            clean_wp_061:
+              {}
+            clean_wp_062:
+              {}
+            clean_wp_063:
+              {}
+            clean_wp_064:
+              {}
+            clean_wp_065:
+              {}
+            clean_wp_066:
+              {}
+            clean_wp_067:
+              {}
+            clean_wp_068:
+              {}
+            clean_wp_069:
+              {}
+            clean_wp_070:
+              {}
+            clean_wp_071:
+              {}
+            clean_wp_072:
+              {}
+            clean_wp_073:
+              {}
+            clean_wp_074:
+              {}
+            clean_wp_075:
+              {}
+            clean_wp_076:
+              {}
+            clean_wp_077:
+              {}
+            clean_wp_078:
+              {}
+            clean_wp_079:
+              {}
+            clean_wp_080:
+              {}
+            clean_wp_081:
+              {}
+            clean_wp_082:
+              {}
+            clean_wp_083:
+              {}
+            clean_wp_084:
+              {}
+            clean_wp_085:
+              {}
+            clean_wp_086:
+              {}
+            clean_wp_087:
+              {}
+            clean_wp_088:
+              {}
+            clean_wp_089:
+              {}
+            clean_wp_090:
+              {}
+            clean_wp_091:
+              {}
+            clean_wp_092:
+              {}
+            clean_wp_093:
+              {}
+            clean_wp_094:
+              {}
+            clean_wp_095:
+              {}
+            clean_wp_096:
+              {}
+            clean_wp_097:
+              {}
+            clean_wp_098:
+              {}
+            clean_wp_099:
+              {}
+            clean_wp_100:
+              {}
+            clean_wp_101:
+              {}
+            clean_wp_102:
+              {}
+            clean_wp_103:
+              {}
+            clean_wp_104:
+              {}
+            clean_wp_105:
+              {}
+            clean_wp_106:
+              {}
+            clean_wp_107:
+              {}
+            clean_wp_108:
+              {}
+            clean_wp_109:
+              {}
+            clean_wp_110:
+              {}
+            clean_wp_111:
+              {}
+            clean_wp_112:
+              {}
+            clean_wp_113:
+              {}
+            clean_wp_114:
+              {}
+            clean_wp_115:
+              {}
+            clean_wp_116:
+              {}
+            clean_wp_117:
+              {}
+            clean_wp_118:
+              {}
+            clean_wp_119:
+              {}
+            clean_wp_120:
+              {}
+            clean_wp_121:
+              {}
+            clean_wp_122:
+              {}
+            clean_wp_123:
+              {}
+            clean_wp_124:
+              {}
+            clean_wp_125:
+              {}
+            clean_wp_126:
+              {}
+            clean_wp_127:
+              {}
+            clean_wp_128:
+              {}
+            clean_wp_129:
+              {}
+            clean_wp_130:
+              {}
+            clean_wp_131:
+              {}
+            clean_wp_132:
+              {}
+            clean_wp_133:
+              {}
+            clean_wp_134:
+              {}
+            clean_wp_135:
+              {}
+            clean_wp_136:
+              {}
+            clean_wp_137:
+              {}
+            clean_wp_138:
+              {}
+            clean_wp_139:
+              {}
+            clean_wp_140:
+              {}
+            clean_wp_141:
+              {}
+            clean_wp_142:
+              {}
+            clean_wp_143:
+              {}
+            clean_wp_144:
+              {}
+            clean_wp_145:
+              {}
+            clean_wp_146:
+              {}
+            clean_wp_147:
+              {}
+            clean_wp_148:
+              {}
+            clean_wp_149:
+              {}
+            clean_wp_150:
+              {}
+            clean_wp_151:
+              {}
+            clean_wp_152:
+              {}
+            clean_wp_153:
+              {}
+            clean_wp_154:
+              {}
+            clean_wp_155:
+              {}
+            clean_wp_156:
+              {}
+            clean_wp_157:
+              {}
+            clean_wp_158:
+              {}
+            clean_wp_159:
+              {}
+            clean_wp_160:
+              {}
+            clean_wp_161:
+              {}
+            clean_wp_162:
+              {}
+            clean_wp_163:
+              {}
+            clean_wp_164:
+              {}
+            clean_wp_165:
+              {}
+            clean_wp_166:
+              {}
+            clean_wp_167:
+              {}
+            clean_wp_168:
+              {}
+            clean_wp_169:
+              {}
+            clean_wp_170:
+              {}
+            clean_wp_171:
+              {}
+            clean_wp_172:
+              {}
+            clean_wp_173:
+              {}
+            clean_wp_174:
+              {}
+            clean_wp_175:
+              {}
+            clean_wp_176:
+              {}
+            clean_wp_177:
+              {}
+            clean_wp_178:
+              {}
+            clean_wp_179:
+              {}
+            clean_wp_180:
+              {}
+            clean_wp_181:
+              {}
+            clean_wp_182:
+              {}
+            clean_wp_183:
+              {}
+            clean_wp_184:
+              {}
+            clean_wp_185:
+              {}
+            clean_wp_186:
+              {}
+            clean_wp_187:
+              {}
+            clean_wp_188:
+              {}
+            clean_wp_189:
+              {}
+            clean_wp_190:
+              {}
+            clean_wp_191:
+              {}
+            clean_wp_192:
+              {}
+            clean_wp_193:
+              {}
+            clean_wp_194:
+              {}
+            clean_wp_195:
+              {}
+            clean_wp_196:
+              {}
+            clean_wp_197:
+              {}
+            clean_wp_198:
+              {}
+            clean_wp_199:
+              {}
+            clean_wp_200:
+              {}
+            clean_wp_201:
+              {}
+            clean_wp_202:
+              {}
+            clean_wp_203:
+              {}
+            clean_wp_204:
+              {}
+            clean_wp_205:
+              {}
+            clean_wp_206:
+              {}
+            clean_wp_207:
+              {}
+            clean_wp_208:
+              {}
+            clean_wp_209:
+              {}
+            clean_wp_210:
+              {}
+            clean_wp_211:
+              {}
+            clean_wp_212:
+              {}
+            clean_wp_213:
+              {}
+            clean_wp_214:
+              {}
+            clean_wp_215:
+              {}
+            clean_wp_216:
+              {}
+            clean_wp_217:
+              {}
+            clean_wp_218:
+              {}
+            clean_wp_219:
+              {}
+            clean_wp_220:
+              {}
+            clean_wp_221:
+              {}
+            clean_wp_222:
+              {}
+            clean_wp_223:
+              {}
+            clean_wp_224:
+              {}
+            clean_wp_225:
+              {}
+            clean_wp_226:
+              {}
+            clean_wp_227:
+              {}
+            clean_wp_228:
+              {}
+            clean_wp_229:
+              {}
+            clean_wp_230:
+              {}
+            clean_wp_231:
+              {}
+            clean_wp_232:
+              {}
+            clean_wp_233:
+              {}
+            clean_wp_234:
+              {}
+            clean_wp_235:
+              {}
+            clean_wp_236:
+              {}
+            clean_wp_237:
+              {}
+            clean_wp_238:
+              {}
+            clean_wp_239:
+              {}
+            clean_wp_240:
+              {}
+            clean_wp_241:
+              {}
+            clean_wp_242:
+              {}
+            clean_wp_243:
+              {}
+            clean_wp_244:
+              {}
+            clean_wp_245:
+              {}
+            clean_wp_246:
+              {}
+            clean_wp_247:
+              {}
+            clean_wp_248:
+              {}
+            clean_wp_249:
+              {}
+            clean_wp_250:
+              {}
+            clean_wp_251:
+              {}
+            clean_wp_252:
+              {}
+            clean_wp_253:
+              {}
+            clean_wp_254:
+              {}
+            clean_wp_255:
+              {}
+            clean_wp_256:
+              {}
+            clean_wp_257:
+              {}
+            clean_wp_258:
+              {}
+            clean_wp_259:
+              {}
+            clean_wp_260:
+              {}
+            clean_wp_261:
+              {}
+            clean_wp_262:
+              {}
+            clean_wp_263:
+              {}
+            clean_wp_264:
+              {}
+            clean_wp_265:
+              {}
+            clean_wp_266:
+              {}
+            clean_wp_267:
+              {}
+            clean_wp_268:
+              {}
+            clean_wp_269:
+              {}
+            clean_wp_270:
+              {}
+            clean_wp_271:
+              {}
+            clean_wp_272:
+              {}
+            clean_wp_273:
+              {}
+            clean_wp_274:
+              {}
+            clean_wp_275:
+              {}
+            clean_wp_276:
+              {}
+            clean_wp_277:
+              {}
+            clean_wp_278:
+              {}
+            clean_wp_279:
+              {}
+            clean_wp_280:
+              {}
+            clean_wp_281:
+              {}
+            clean_wp_282:
+              {}
+            clean_wp_283:
+              {}
+            clean_wp_284:
+              {}
+            clean_wp_285:
+              {}
+            clean_wp_286:
+              {}
+            clean_wp_287:
+              {}
+            clean_wp_288:
+              {}
+            clean_wp_289:
+              {}
+            clean_wp_290:
+              {}
+            clean_wp_291:
+              {}
+            clean_wp_292:
+              {}
+            clean_wp_293:
+              {}
+            clean_wp_294:
+              {}
+            clean_wp_295:
+              {}
+            clean_wp_296:
+              {}
+            clean_wp_297:
+              {}
+            clean_wp_298:
+              {}
+            clean_wp_299:
+              {}
+            clean_wp_300:
+              {}
+            clean_wp_301:
+              {}
+            clean_wp_302:
+              {}
+            clean_wp_303:
+              {}
+            clean_wp_304:
+              {}
+            clean_wp_305:
+              {}
+            clean_wp_306:
+              {}
+            clean_wp_307:
+              {}
+            clean_wp_308:
+              {}
+            clean_wp_309:
+              {}
+            clean_wp_310:
+              {}
+            clean_wp_311:
+              {}
+            clean_wp_312:
+              {}
+            clean_wp_313:
+              {}
+            clean_wp_314:
+              {}
+            clean_wp_315:
+              {}
+            clean_wp_316:
+              {}
+            clean_wp_317:
+              {}
+            clean_wp_318:
+              {}
+            clean_wp_319:
+              {}
+            clean_wp_320:
+              {}
+            clean_wp_321:
+              {}
+            clean_wp_322:
+              {}
+            clean_wp_323:
+              {}
+            clean_wp_324:
+              {}
+            clean_wp_325:
+              {}
+            clean_wp_326:
+              {}
+            clean_wp_327:
+              {}
+            clean_wp_328:
+              {}
+            clean_wp_329:
+              {}
+            clean_wp_330:
+              {}
+            clean_wp_331:
+              {}
+            clean_wp_332:
+              {}
+            clean_wp_333:
+              {}
+            clean_wp_334:
+              {}
+            clean_wp_335:
+              {}
+            clean_wp_336:
+              {}
+            clean_wp_337:
+              {}
+            clean_wp_338:
+              {}
+            clean_wp_339:
+              {}
+            clean_wp_340:
+              {}
+            clean_wp_341:
+              {}
+            clean_wp_342:
+              {}
+            clean_wp_343:
+              {}
+            clean_wp_344:
+              {}
+            clean_wp_345:
+              {}
+            clean_wp_346:
+              {}
+            clean_wp_347:
+              {}
+            clean_wp_348:
+              {}
+            clean_wp_349:
+              {}
+            clean_wp_350:
+              {}
+            clean_wp_351:
+              {}
+            clean_wp_352:
+              {}
+            clean_wp_353:
+              {}
+            clean_wp_354:
+              {}
+            clean_wp_355:
+              {}
+            clean_wp_356:
+              {}
+            clean_wp_357:
+              {}
+            clean_wp_358:
+              {}
+            clean_wp_359:
+              {}
+            clean_wp_360:
+              {}
+            clean_wp_361:
+              {}
+            clean_wp_362:
+              {}
+            clean_wp_363:
+              {}
+            clean_wp_364:
+              {}
+            clean_wp_365:
+              {}
+            clean_wp_366:
+              {}
+            clean_wp_367:
+              {}
+            clean_wp_368:
+              {}
+            clean_wp_369:
+              {}
+            clean_wp_370:
+              {}
+            clean_wp_371:
+              {}
+            clean_wp_372:
+              {}
+            clean_wp_373:
+              {}
+            clean_wp_374:
+              {}
+            clean_wp_375:
+              {}
+            clean_wp_376:
+              {}
+            clean_wp_377:
+              {}
+            clean_wp_378:
+              {}
+            clean_wp_379:
+              {}
+            clean_wp_380:
+              {}
+            clean_wp_381:
+              {}
+            clean_wp_382:
+              {}
+            clean_wp_383:
+              {}
+            clean_wp_384:
+              {}
+            clean_wp_385:
+              {}
+            clean_wp_386:
+              {}
+            clean_wp_387:
+              {}
+            clean_wp_388:
+              {}
+            clean_wp_389:
+              {}
+            clean_wp_390:
+              {}
+            clean_wp_391:
+              {}
+            clean_wp_392:
+              {}
+            clean_wp_393:
+              {}
+            clean_wp_394:
+              {}
+            clean_wp_395:
+              {}
+            clean_wp_396:
+              {}
+            clean_wp_397:
+              {}
+            clean_wp_398:
+              {}
+            clean_wp_399:
+              {}
+            clean_wp_400:
+              {}
+            clean_wp_401:
+              {}
+            clean_wp_402:
+              {}
+            clean_wp_403:
+              {}
+            clean_wp_404:
+              {}
+            clean_wp_405:
+              {}
+            clean_wp_406:
+              {}
+            clean_wp_407:
+              {}
+            clean_wp_408:
+              {}
+            clean_wp_409:
+              {}
+            clean_wp_410:
+              {}
+            clean_wp_411:
+              {}
+            clean_wp_412:
+              {}
+            clean_wp_413:
+              {}
+            clean_wp_414:
+              {}
+            clean_wp_415:
+              {}
+            clean_wp_416:
+              {}
+            clean_wp_417:
+              {}
+            clean_wp_418:
+              {}
+            clean_wp_419:
+              {}
+            clean_wp_420:
+              {}
+            clean_wp_421:
+              {}
+            clean_wp_422:
+              {}
+            clean_wp_423:
+              {}
+            clean_wp_424:
+              {}
+            clean_wp_425:
+              {}
+            clean_wp_426:
+              {}
+            clean_wp_427:
+              {}
+            clean_wp_428:
+              {}
+            clean_wp_429:
+              {}
+            clean_wp_430:
+              {}
+            clean_wp_431:
+              {}
+            clean_wp_432:
+              {}
+            clean_wp_433:
+              {}
+            clean_wp_434:
+              {}
+            clean_wp_435:
+              {}
+            clean_wp_436:
+              {}
+            clean_wp_437:
+              {}
+            clean_wp_438:
+              {}
+            clean_wp_439:
+              {}
+            clean_wp_440:
+              {}
+            clean_wp_441:
+              {}
+            clean_wp_442:
+              {}
+            clean_wp_443:
+              {}
+            clean_wp_444:
+              {}
+            clean_wp_445:
+              {}
+            clean_wp_446:
+              {}
+            clean_wp_447:
+              {}
+            clean_wp_448:
+              {}
+            clean_wp_449:
+              {}
+            clean_wp_450:
+              {}
+            clean_wp_451:
+              {}
+            clean_wp_452:
+              {}
+            clean_wp_453:
+              {}
+            clean_wp_454:
+              {}
+            clean_wp_455:
+              {}
+            clean_wp_456:
+              {}
+            clean_wp_457:
+              {}
+            clean_wp_458:
+              {}
+            clean_wp_459:
+              {}
+            clean_wp_460:
+              {}
+            clean_wp_461:
+              {}
+            clean_wp_462:
+              {}
+            clean_wp_463:
+              {}
+            clean_wp_464:
+              {}
+            clean_wp_465:
+              {}
+            clean_wp_466:
+              {}
+            clean_wp_467:
+              {}
+            clean_wp_468:
+              {}
+            clean_wp_469:
+              {}
+            clean_wp_470:
+              {}
+            clean_wp_471:
+              {}
+          ground_plane:
+            {}
+          mixer_world:
+            mixer_base_link:
+              mixer_planet_1_carrier:
+                mixer_planet_1_link:
+                  {}
+              mixer_planet_2_carrier:
+                mixer_planet_2_link:
+                  {}
+              mixer_shroud_link:
+                {}
+              mixer_sun_link:
+                {}
+      Update Interval: 0
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -492,10 +2519,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5253980755805969
+      Pitch: 0.41039806604385376
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.1853983402252197
+      Yaw: 0.5403984785079956
     Saved: ~
 Window Geometry:
   Displays:
@@ -509,7 +2536,7 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001f30000035afc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000104000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004100fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000147000001830000017d00fffffffb0000000a0049006d00610067006501000002d0000000c70000002800ffffff000000010000010f0000035afc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d0000035a000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d0065010000000000000780000002fb00fffffffb0000000800540069006d00650100000000000004500000000000000000000004720000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001f30000035afc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000101000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004100fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000144000001880000017d00fffffffb0000000a0049006d00610067006501000002d2000000c50000002800ffffff000000010000010f0000035afc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d0000035a000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d0065010000000000000780000002fb00fffffffb0000000800540069006d00650100000000000004500000000000000000000004720000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
