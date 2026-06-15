@@ -29,6 +29,9 @@ This workspace implements a force-compliant surface-following skill on a UR10e a
 
 The simulation uses **Gazebo Classic** with a physically modelled bowl mesh, textured OBJ model, and a Gazebo Classic force/torque sensor (wrist) for real-time wrench feedback.
 
+## Normal surface Generated from the point clouds and meshes 
+<img width="1072" height="819" alt="image" src="https://github.com/user-attachments/assets/320a5722-e619-4f28-855a-4581e3f158f7" />
+
 ---
 
 ## Repository Structure
