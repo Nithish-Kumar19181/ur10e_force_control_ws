@@ -8,7 +8,7 @@
     estimates normals (cloud PCA with CAD fallback) and emits a horizontal raster
     cleaning path as base_link waypoints (PoseArray + TF + markers).</description>
   <maintainer email="nith600e@gmail.com">nithish</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
