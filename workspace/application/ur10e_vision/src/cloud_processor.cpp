@@ -3,7 +3,8 @@
 // Node A of the ur10e_vision cleaning-path pipeline.
 //
 // Takes a single organized RGB-D point cloud snapshot from the simulated D435i,
-// crops it to a central ROI (75% of image area by default), filters it, keeps
+// crops it to a central ROI (independent horizontal/vertical fractions of the
+// image kept, ~86.6% each by default), filters it, keeps
 // only the NEAREST connected surface cluster, transforms it into base_link and
 // republishes it (latched) for the Python path_generator.
 //
@@ -61,7 +62,8 @@ public:
     input_topic_ = declare_parameter<std::string>("input_cloud_topic", "/camera/camera/points");
     output_frame_ = declare_parameter<std::string>("output_frame", "base_link");
     capture_on_start_ = declare_parameter<bool>("capture_on_start", false);
-    crop_area_fraction_ = declare_parameter<double>("crop_area_fraction", 0.75);
+    crop_width_fraction_ = declare_parameter<double>("crop_width_fraction", 0.866);
+    crop_height_fraction_ = declare_parameter<double>("crop_height_fraction", 0.866);
     depth_min_ = declare_parameter<double>("depth_min", 0.15);
     depth_max_ = declare_parameter<double>("depth_max", 3.0);
     sor_mean_k_ = declare_parameter<int>("sor_mean_k", 30);
@@ -92,9 +94,10 @@ public:
         std::placeholders::_1, std::placeholders::_2));
 
     RCLCPP_INFO(get_logger(),
-      "cloud_processor up. input=%s output_frame=%s crop_area=%.2f "
+      "cloud_processor up. input=%s output_frame=%s crop=[w %.2f, h %.2f] "
       "depth=[%.2f, %.2f] %s",
-      input_topic_.c_str(), output_frame_.c_str(), crop_area_fraction_,
+      input_topic_.c_str(), output_frame_.c_str(),
+      crop_width_fraction_, crop_height_fraction_,
       depth_min_, depth_max_,
       capture_on_start_ ? "(auto-capture first frame)" : "(waiting for /ur10e_vision/trigger)");
   }
@@ -144,10 +147,12 @@ private:
     const uint32_t W = cloud->width;
     const uint32_t H = cloud->height;
 
-    // --- 1. Central crop (75% of area => linear fraction sqrt(area_fraction)).
-    const double lin = std::sqrt(std::clamp(crop_area_fraction_, 0.0, 1.0));
-    const uint32_t roi_w = static_cast<uint32_t>(std::round(W * lin));
-    const uint32_t roi_h = static_cast<uint32_t>(std::round(H * lin));
+    // --- 1. Central crop: independent horizontal/vertical fractions of the
+    // image kept, each centered on the image midline.
+    const double wf = std::clamp(crop_width_fraction_, 0.0, 1.0);
+    const double hf = std::clamp(crop_height_fraction_, 0.0, 1.0);
+    const uint32_t roi_w = static_cast<uint32_t>(std::round(W * wf));
+    const uint32_t roi_h = static_cast<uint32_t>(std::round(H * hf));
     const uint32_t x0 = (W - roi_w) / 2;
     const uint32_t y0 = (H - roi_h) / 2;
     const uint32_t x1 = x0 + roi_w;
@@ -299,7 +304,8 @@ private:
   std::string input_topic_;
   std::string output_frame_;
   bool capture_on_start_{false};
-  double crop_area_fraction_{0.75};
+  double crop_width_fraction_{0.866};
+  double crop_height_fraction_{0.866};
   double depth_min_{0.15};
   double depth_max_{3.0};
   int sor_mean_k_{30};

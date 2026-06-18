@@ -59,7 +59,7 @@ def generate_launch_description():
             # Use the custom SRDF that disables end_effector_link / ft_frame collisions
             "moveit_config_package": "ur10e_simulation_pkg",
             "moveit_config_file": "ur10e.srdf.xacro",
-            "spawn_x": "1.3",
+            "spawn_x": "1.55",
             "spawn_y": "0.0",
             "spawn_z": "2.1",
             "spawn_roll": "0.0",

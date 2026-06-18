@@ -1,24 +1,4 @@
 #!/usr/bin/env python3
-"""path_generator.py - Node B of the ur10e_vision cleaning-path pipeline.
-
-Consumes the cropped/isolated organized surface cloud (base_link) from
-cloud_processor and produces a horizontal raster ("lawnmower") cleaning path:
-
-  * raster grid laid out in the ROI image plane (projected 2D grid),
-    each cell back-projected to its 3D surface point (organized lookup),
-  * boustrophedon (serpentine) ordering, stepping vertically by tool_width,
-  * per-waypoint surface normal: cloud PCA (Open3D), CAD-ICP fallback in
-    sparse/occluded cells,
-  * orientation frame: +Z = approach_axis_sign * normal (into the surface),
-    +X = path tangent, +Y = Z x X,
-  * configurable standoff offset along the outward normal.
-
-Publishes:
-  /ur10e_vision/cleaning_path   geometry_msgs/PoseArray   (base_link)
-  /ur10e_vision/path_markers    visualization_msgs/MarkerArray
-  TF: clean_wp_000 ... clean_wp_NNN (static, parent = base_link)
-"""
-
 import math
 import os
 
@@ -124,6 +104,11 @@ class PathGenerator(Node):
         self.icp_max_corr = float(self.declare_parameter("icp_max_correspondence", 0.05).value)
         self.icp_fitness_min = float(self.declare_parameter("icp_fitness_min", 0.3).value)
 
+        # Back-fill interior holes (sparse/occluded cells bracketed by real
+        # points) from the registered CAD blade. Needs enable_cad_fallback.
+        self.cad_fill = bool(self.declare_parameter("cad_fill_interior", True).value)
+        self.cad_fill_max_gap = float(self.declare_parameter("cad_fill_max_gap", 0.2).value)
+
         self.publish_wp_tf = bool(self.declare_parameter("publish_waypoint_tf", True).value)
         self.wp_tf_prefix = self.declare_parameter("waypoint_tf_prefix", "clean_wp_").value
 
@@ -204,7 +189,7 @@ class PathGenerator(Node):
         cad = self._register_cad(pcd) if self.enable_cad else None
 
         # ---- raster grid in ROI image plane (horizontal passes, step v) ----
-        positions, wp_normals = [], []
+        positions, wp_normals, inferred = [], [], []
         if self.raster_direction == "vertical":
             pass_iter = range(x0, x1, pitch_px)        # passes along columns
             along_iter = lambda: range(y0, y1, along_px)
@@ -216,21 +201,31 @@ class PathGenerator(Node):
             def pick(p, q):  # p = row (pass), q = col (along)
                 return self._sample(xyz, valid, q, p, along_px, pitch_px)
 
+        use_cad_fill = self.cad_fill and cad is not None
         serpentine = False
         for p in pass_iter:
             cols = list(along_iter())
             if serpentine:
                 cols = cols[::-1]
             serpentine = not serpentine
-            for q in cols:
-                pt = pick(p, q)
-                if pt is None:
+
+            # Measured surface point per along-cell (None where the cloud has a
+            # hole). Interior holes are back-filled from the registered CAD.
+            raw = [pick(p, q) for q in cols]
+            cells = self._cad_fill_pass(raw, cad) if use_cad_fill else \
+                [(pt, None, False) if pt is not None else None for pt in raw]
+
+            for rec in cells:
+                if rec is None:
                     continue
-                nrm = self._normal_at(pt, kdt, normals, cad)
+                pt, cad_nrm, is_inferred = rec
+                nrm = cad_nrm if cad_nrm is not None else \
+                    self._normal_at(pt, kdt, normals, cad)
                 if nrm is None:
                     continue
                 positions.append(pt)
                 wp_normals.append(nrm)
+                inferred.append(is_inferred)
 
         if len(positions) < 2:
             self.get_logger().warn(
@@ -239,10 +234,13 @@ class PathGenerator(Node):
 
         positions = np.asarray(positions)
         wp_normals = np.asarray(wp_normals)
-        self._publish(positions, wp_normals, msg.header.stamp)
+        inferred = np.asarray(inferred, dtype=bool)
+        n_filled = int(inferred.sum())
+        self._publish(positions, wp_normals, inferred, msg.header.stamp)
         self.get_logger().info(
             f"Generated {len(positions)} waypoints "
-            f"(pitch={pitch_px}px/{self.tool_width}m, along={along_px}px/{self.waypoint_spacing}m"
+            f"({n_filled} CAD-filled in gaps; "
+            f"pitch={pitch_px}px/{self.tool_width}m, along={along_px}px/{self.waypoint_spacing}m"
             f"{', CAD-assisted' if cad else ''}).")
 
     # ---- helpers -----------------------------------------------------------
@@ -275,6 +273,31 @@ class PathGenerator(Node):
                     if d < best_d:
                         best_d, best = d, xyz[vv, uu].copy()
         return best
+
+    def _cad_fill_pass(self, raw, cad):
+        """Back-fill interior holes (None) in a raster pass from the registered CAD."""
+        out = [(p, None, False) if p is not None else None for p in raw]
+        valid_idx = [i for i, p in enumerate(raw) if p is not None]
+        if cad is None or len(valid_idx) < 2:
+            return out
+        cad_pts, cad_nrm, kdt = cad["points"], cad["normals"], cad["kdt"]
+        for a, b in zip(valid_idx[:-1], valid_idx[1:]):
+            if b - a <= 1:
+                continue                                   # adjacent, no hole
+            pa, pb = raw[a], raw[b]
+            if np.linalg.norm(pb - pa) > self.cad_fill_max_gap:
+                continue                                   # too wide to bridge
+            span = b - a
+            for k in range(a + 1, b):
+                est = (pa + (k - a) / span * (pb - pa)).astype(np.float64)
+                kk, idx, _ = kdt.search_knn_vector_3d(est, 1)
+                if kk < 1:
+                    continue
+                j = idx[0]
+                n = cad_nrm[j]
+                nn = np.linalg.norm(n)
+                out[k] = (cad_pts[j].copy(), (n / nn) if nn > 1e-9 else None, True)
+        return out
 
     def _camera_origin(self, stamp):
         try:
@@ -357,9 +380,10 @@ class PathGenerator(Node):
         src_full.transform(T)
         self.get_logger().info(f"CAD fallback: {fname} registered, fitness={fitness:.2f}.")
         return {"kdt": o3d.geometry.KDTreeFlann(src_full),
+                "points": np.asarray(src_full.points),
                 "normals": np.asarray(src_full.normals)}
 
-    def _publish(self, positions, normals, stamp):
+    def _publish(self, positions, normals, inferred, stamp):
         pa = PoseArray()
         pa.header.frame_id = self.output_frame
         pa.header.stamp = stamp
@@ -402,9 +426,9 @@ class PathGenerator(Node):
         self.pose_pub.publish(pa)
         if transforms:
             self.static_bcast.sendTransform(transforms)
-        self.marker_pub.publish(self._markers(pa, normals, stamp))
+        self.marker_pub.publish(self._markers(pa, normals, inferred, stamp))
 
-    def _markers(self, pa: PoseArray, normals, stamp):
+    def _markers(self, pa: PoseArray, normals, inferred, stamp):
         ma = MarkerArray()
         # path line
         line = Marker()
@@ -428,7 +452,12 @@ class PathGenerator(Node):
             arr.type = Marker.ARROW
             arr.action = Marker.ADD
             arr.scale.x, arr.scale.y, arr.scale.z = 0.004, 0.008, 0.0
-            arr.color.r, arr.color.g, arr.color.b, arr.color.a = 1.0, 0.2, 0.2, 0.9
+            if bool(inferred[i]):
+                # CAD-inferred (gap-filled) waypoint -> yellow.
+                arr.color.r, arr.color.g, arr.color.b, arr.color.a = 1.0, 0.85, 0.1, 0.9
+            else:
+                # Measured waypoint -> red.
+                arr.color.r, arr.color.g, arr.color.b, arr.color.a = 1.0, 0.2, 0.2, 0.9
             start = pose.position
             end = type(start)()
             end.x = start.x + 0.03 * float(n[0])
@@ -436,6 +465,20 @@ class PathGenerator(Node):
             end.z = start.z + 0.03 * float(n[2])
             arr.points = [start, end]
             ma.markers.append(arr)
+        # Highlight CAD-inferred (gap-filled) waypoint positions as spheres.
+        sph = Marker()
+        sph.header.frame_id = self.output_frame
+        sph.header.stamp = stamp
+        sph.ns = "cad_filled"
+        sph.id = 0
+        sph.type = Marker.SPHERE_LIST
+        sph.action = Marker.ADD
+        sph.scale.x = sph.scale.y = sph.scale.z = 0.01
+        sph.color.r, sph.color.g, sph.color.b, sph.color.a = 1.0, 0.85, 0.1, 1.0
+        for pose, is_inf in zip(pa.poses, inferred):
+            if bool(is_inf):
+                sph.points.append(pose.position)
+        ma.markers.append(sph)
         return ma
 
 
