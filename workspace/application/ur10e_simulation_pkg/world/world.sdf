@@ -1,25 +1,25 @@
-<sdf version='1.9'>
-  <world name='empty'>
-    <physics name='1ms' type='ignored'>
-      <max_step_size>0.001</max_step_size>
-      <real_time_factor>1</real_time_factor>
-      <real_time_update_rate>1000</real_time_update_rate>
-    </physics>
-    <plugin name='gz::sim::systems::Physics' filename='ignition-gazebo-physics-system'/>
-    <plugin name='gz::sim::systems::UserCommands' filename='ignition-gazebo-user-commands-system'/>
-    <plugin name='gz::sim::systems::SceneBroadcaster' filename='ignition-gazebo-scene-broadcaster-system'/>
-    <plugin name='gz::sim::systems::Contact' filename='ignition-gazebo-contact-system'/>
-    <plugin name='ignition::gazebo::systems::ForceTorque' filename='ignition-gazebo-forcetorque-system'/>
-    <gravity>0 0 -9.8</gravity>
-    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
-    <atmosphere type='adiabatic'/>
-    <scene>
-      <ambient>0.4 0.4 0.4 1</ambient>
-      <background>0.7 0.7 0.7 1</background>
-      <shadows>true</shadows>
-    </scene>
+<sdf version='1.7'>
+  <world name='default'>
+    <light name='sun' type='directional'>
+      <cast_shadows>1</cast_shadows>
+      <pose>0 0 10 0 -0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+      <spot>
+        <inner_angle>0</inner_angle>
+        <outer_angle>0</outer_angle>
+        <falloff>0</falloff>
+      </spot>
+    </light>
     <model name='ground_plane'>
-      <static>true</static>
+      <static>1</static>
       <link name='link'>
         <collision name='collision'>
           <geometry>
@@ -30,13 +30,23 @@
           </geometry>
           <surface>
             <friction>
-              <ode/>
+              <ode>
+                <mu>100</mu>
+                <mu2>50</mu2>
+              </ode>
+              <torsional>
+                <ode/>
+              </torsional>
             </friction>
+            <contact>
+              <ode/>
+            </contact>
             <bounce/>
-            <contact/>
           </surface>
+          <max_contacts>10</max_contacts>
         </collision>
         <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
           <geometry>
             <plane>
               <normal>0 0 1</normal>
@@ -44,57 +54,1199 @@
             </plane>
           </geometry>
           <material>
-            <ambient>0.8 0.8 0.8 1</ambient>
-            <diffuse>0.8 0.8 0.8 1</diffuse>
-            <specular>0.8 0.8 0.8 1</specular>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Grey</name>
+            </script>
           </material>
         </visual>
-        <pose>0 0 0 0 -0 0</pose>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+    </model>
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type='adiabatic'/>
+    <physics type='ode'>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>1</shadows>
+    </scene>
+    <audio>
+      <device>default</device>
+    </audio>
+    <wind/>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>0</latitude_deg>
+      <longitude_deg>0</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+    <model name='ur'>
+      <joint name='base_joint' type='fixed'>
+        <pose relative_to='__model__'>0 0 0 0 -0 0</pose>
+        <parent>world</parent>
+        <child>base_link</child>
+      </joint>
+      <link name='base_link'>
+        <pose relative_to='base_joint'>0 0 0 0 -0 0</pose>
         <inertial>
           <pose>0 0 0 0 -0 0</pose>
-          <mass>1</mass>
+          <mass>4</mass>
           <inertia>
-            <ixx>1</ixx>
+            <ixx>0.00610633</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>1</iyy>
+            <iyy>0.00610633</iyy>
             <iyz>0</iyz>
-            <izz>1</izz>
+            <izz>0.01125</izz>
           </inertia>
         </inertial>
-        <enable_wind>false</enable_wind>
+        <collision name='base_link_inertia_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/collision/base.stl</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='base_link_inertia_visual'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/visual/base.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
       </link>
-      <pose>0 0 0 0 -0 0</pose>
-      <self_collide>false</self_collide>
+      <joint name='shoulder_pan_joint' type='revolute'>
+        <pose relative_to='base_link'>0 0 0.1807 0 -0 3.14159</pose>
+        <parent>base_link</parent>
+        <child>shoulder_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-6.28319</lower>
+            <upper>6.28319</upper>
+            <effort>330</effort>
+            <velocity>2.0944</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='shoulder_link'>
+        <pose relative_to='shoulder_pan_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0.021 -0.027 0 1.5708 -0 0</pose>
+          <mass>7.369</mass>
+          <inertia>
+            <ixx>0.03408</ixx>
+            <ixy>2e-05</ixy>
+            <ixz>-0.00425</ixz>
+            <iyy>0.03529</iyy>
+            <iyz>8e-05</iyz>
+            <izz>0.02156</izz>
+          </inertia>
+        </inertial>
+        <collision name='shoulder_link_collision'>
+          <pose>0 0 0 0 -0 3.14159</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/collision/shoulder.stl</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='shoulder_link_visual'>
+          <pose>0 0 0 0 -0 3.14159</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/visual/shoulder.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='shoulder_lift_joint' type='revolute'>
+        <pose relative_to='shoulder_link'>0 0 0 1.5708 -0 0</pose>
+        <parent>shoulder_link</parent>
+        <child>upper_arm_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-6.28319</lower>
+            <upper>6.28319</upper>
+            <effort>330</effort>
+            <velocity>2.0944</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='upper_arm_link'>
+        <pose relative_to='shoulder_lift_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>-0.2327 0 0.158 0 -0 0</pose>
+          <mass>13.051</mass>
+          <inertia>
+            <ixx>0.02814</ixx>
+            <ixy>5e-05</ixy>
+            <ixz>-0.01561</ixz>
+            <iyy>0.77068</iyy>
+            <iyz>2e-05</iyz>
+            <izz>0.76943</izz>
+          </inertia>
+        </inertial>
+        <collision name='upper_arm_link_collision'>
+          <pose>0 0 0.1762 1.5708 0 -1.5708</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/collision/upperarm.stl</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='upper_arm_link_visual'>
+          <pose>0 0 0.1762 1.5708 0 -1.5708</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/visual/upperarm.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='elbow_joint' type='revolute'>
+        <pose relative_to='upper_arm_link'>-0.6127 0 0 0 -0 0</pose>
+        <parent>upper_arm_link</parent>
+        <child>forearm_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-3.14159</lower>
+            <upper>3.14159</upper>
+            <effort>150</effort>
+            <velocity>3.14159</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='forearm_link'>
+        <pose relative_to='elbow_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>-0.33155 0 0.068 0 -0 0</pose>
+          <mass>3.989</mass>
+          <inertia>
+            <ixx>0.01014</ixx>
+            <ixy>8e-05</ixy>
+            <ixz>0.00916</ixz>
+            <iyy>0.30928</iyy>
+            <iyz>0</iyz>
+            <izz>0.30646</izz>
+          </inertia>
+        </inertial>
+        <collision name='forearm_link_collision'>
+          <pose>0 0 0.0393 1.5708 0 -1.5708</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/collision/forearm.stl</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='forearm_link_visual'>
+          <pose>0 0 0.0393 1.5708 0 -1.5708</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/visual/forearm.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='wrist_1_joint' type='revolute'>
+        <pose relative_to='forearm_link'>-0.57155 0 0.17415 0 -0 0</pose>
+        <parent>forearm_link</parent>
+        <child>wrist_1_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-6.28319</lower>
+            <upper>6.28319</upper>
+            <effort>54</effort>
+            <velocity>3.14159</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='wrist_1_link'>
+        <pose relative_to='wrist_1_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 -0.018 0.007 1.5708 -0 0</pose>
+          <mass>2.1</mass>
+          <inertia>
+            <ixx>0.00296</ixx>
+            <ixy>-1e-05</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00222</iyy>
+            <iyz>-0.00024</iyz>
+            <izz>0.00258</izz>
+          </inertia>
+        </inertial>
+        <collision name='wrist_1_link_collision'>
+          <pose>0 0 -0.135 1.5708 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/collision/wrist1.stl</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='wrist_1_link_visual'>
+          <pose>0 0 -0.135 1.5708 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/visual/wrist1.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='wrist_2_joint' type='revolute'>
+        <pose relative_to='wrist_1_link'>0 -0.11985 -0 1.5708 -0 0</pose>
+        <parent>wrist_1_link</parent>
+        <child>wrist_2_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-6.28319</lower>
+            <upper>6.28319</upper>
+            <effort>54</effort>
+            <velocity>3.14159</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='wrist_2_link'>
+        <pose relative_to='wrist_2_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0.018 -0.007 -1.5708 0 0</pose>
+          <mass>1.98</mass>
+          <inertia>
+            <ixx>0.00296</ixx>
+            <ixy>-1e-05</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00222</iyy>
+            <iyz>-0.00024</iyz>
+            <izz>0.00258</izz>
+          </inertia>
+        </inertial>
+        <collision name='wrist_2_link_collision'>
+          <pose>0 0 -0.12 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/collision/wrist2.stl</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='wrist_2_link_visual'>
+          <pose>0 0 -0.12 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/visual/wrist2.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='wrist_3_joint' type='revolute'>
+        <pose relative_to='wrist_2_link'>0 0.11655 -0 -1.5708 0 0</pose>
+        <parent>wrist_2_link</parent>
+        <child>wrist_3_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-6.28319</lower>
+            <upper>6.28319</upper>
+            <effort>54</effort>
+            <velocity>3.14159</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+        <physics>
+          <provide_feedback>1</provide_feedback>
+          <ode>
+            <limit>
+              <cfm>0</cfm>
+              <erp>0.2</erp>
+            </limit>
+            <provide_feedback>1</provide_feedback>
+          </ode>
+        </physics>
+      </joint>
+      <link name='wrist_3_link'>
+        <pose relative_to='wrist_3_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0.001061 0.005611 -0.014934 0 -0 0</pose>
+          <mass>1.187</mass>
+          <inertia>
+            <ixx>0.00264922</ixx>
+            <ixy>-0.00010948</ixy>
+            <ixz>-3.2173e-05</ixz>
+            <iyy>0.00548157</iyy>
+            <iyz>-0.000170057</iyz>
+            <izz>0.00582064</izz>
+          </inertia>
+        </inertial>
+        <collision name='wrist_3_link_collision'>
+          <pose>0 -0.0005 -0.1168 1.5708 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/collision/wrist3.stl</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <collision name='wrist_3_link_fixed_joint_lump__camera_link_collision_1'>
+          <pose>-0 0.0925 0.0106 1.57079 -1.57079 3.14159</pose>
+          <geometry>
+            <box>
+              <size>0.02505 0.09 0.025</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <collision name='wrist_3_link_fixed_joint_lump__end_effector_link_collision_2'>
+          <pose>0 0 -0.005 -3.14159 -0 1.57</pose>
+          <geometry>
+            <mesh>
+              <scale>0.01 0.01 0.01</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/end_effector.stl</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='wrist_3_link_visual'>
+          <pose>0 -0.0005 -0.1168 1.5708 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur_description/share/ur_description/meshes/ur10e/visual/wrist3.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <visual name='wrist_3_link_fixed_joint_lump__camera_link_visual_1'>
+          <pose>-0 0.0925 0.0149 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>model://realsense2_description/meshes/d435.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <visual name='wrist_3_link_fixed_joint_lump__end_effector_link_visual_2'>
+          <pose>0 0 -0.005 -3.14159 -0 1.57</pose>
+          <geometry>
+            <mesh>
+              <scale>0.01 0.01 0.01</scale>
+              <uri>file:///home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/end_effector.stl</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <sensor name='camera_depth' type='depth'>
+          <always_on>1</always_on>
+          <update_rate>30</update_rate>
+          <camera name='camera'>
+            <horizontal_fov>1.50098</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>10</far>
+            </clip>
+          </camera>
+          <plugin name='d435i_camera_controller' filename='libgazebo_ros_camera.so'>
+            <ros>
+              <namespace>camera</namespace>
+            </ros>
+            <camera_name>camera</camera_name>
+            <frame_name>camera_color_optical_frame</frame_name>
+            <min_depth>0.1</min_depth>
+            <max_depth>10.0</max_depth>
+          </plugin>
+          <pose>0.0175 0.0925 0.0106 3.14159 -1.57079 1.57079</pose>
+        </sensor>
+        <sensor name='camera_imu' type='imu'>
+          <always_on>1</always_on>
+          <update_rate>200</update_rate>
+          <plugin name='d435i_imu_plugin' filename='libgazebo_ros_imu_sensor.so'>
+            <ros>
+              <namespace>camera</namespace>
+              <remapping>~/out:=imu</remapping>
+            </ros>
+            <frame_name>camera_gyro_optical_frame</frame_name>
+          </plugin>
+          <pose>0.0175 0.0925 0.0106 3.14159 -1.57079 1.57079</pose>
+          <imu/>
+        </sensor>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <plugin name='gazebo_ros2_control' filename='libgazebo_ros2_control.so'>
+        <parameters>/home/nithish/ur10e_force_control_ws/install/ur10e_testing_pkg/share/ur10e_testing_pkg/config/controller_manager.yaml</parameters>
+      </plugin>
+      <static>0</static>
+      <plugin name='ft_sensor' filename='libgazebo_ros_ft_sensor.so'>
+        <ros>
+          <namespace>/</namespace>
+          <remapping>wrench:=/wrench</remapping>
+        </ros>
+        <update_rate>500</update_rate>
+        <joint_name>wrist_3_joint</joint_name>
+        <frame_name>tool0</frame_name>
+        <gaussian_noise>0.0</gaussian_noise>
+      </plugin>
+      <pose>1.3 0 2.1 0 -0 0</pose>
     </model>
-    <include>
-      <uri>file://<urdf-string></uri>
-      <name>ur</name>
-      <pose>0 0 1.275 3.14159 -0 0</pose>
-    </include>
-    <include>
-      <uri>file:///home/nithish/ur10e_ws/src/ur10e_simulation_pkg/model</uri>
-      <name>Meshy_AI__0218153800_texture</name>
-      <pose>0.008729 0.002974 -3e-06 -1e-06 -0 1.3e-05</pose>
-    </include>
-    <light name='sun' type='directional'>
-      <pose>0 0 10 0 -0 0</pose>
-      <cast_shadows>true</cast_shadows>
-      <intensity>1</intensity>
-      <direction>-0.5 0.1 -0.9</direction>
-      <diffuse>0.8 0.8 0.8 1</diffuse>
-      <specular>0.2 0.2 0.2 1</specular>
-      <attenuation>
-        <range>1000</range>
-        <linear>0.01</linear>
-        <constant>0.90000000000000002</constant>
-        <quadratic>0.001</quadratic>
-      </attenuation>
-      <spot>
-        <inner_angle>0</inner_angle>
-        <outer_angle>0</outer_angle>
-        <falloff>0</falloff>
-      </spot>
-    </light>
+    <model name='planetary_mixer'>
+      <static>0</static>
+      <self_collide>0</self_collide>
+      <allow_auto_disable>1</allow_auto_disable>
+      <link name='base_link'>
+        <pose>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0 0.25 0 -0 0</pose>
+          <mass>180</mass>
+          <inertia>
+            <ixx>9.45</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>9.45</iyy>
+            <iyz>0</iyz>
+            <izz>8.1</izz>
+          </inertia>
+        </inertial>
+        <visual name='base_visual'>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/structure.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.7 0.7 0.7 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+        </visual>
+        <collision name='base_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/structure.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='world_fixed_joint' type='fixed'>
+        <parent>world</parent>
+        <child>base_link</child>
+      </joint>
+      <link name='shroud_link'>
+        <pose>0 0 0 0 -0 0</pose>
+        <velocity_decay>
+          <linear>0.2</linear>
+          <angular>0.5</angular>
+        </velocity_decay>
+        <inertial>
+          <pose>0 0 0.15 0 -0 0</pose>
+          <mass>35</mass>
+          <inertia>
+            <ixx>0.75</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.75</iyy>
+            <iyz>0</iyz>
+            <izz>0.57</izz>
+          </inertia>
+        </inertial>
+        <visual name='shroud_visual'>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/shroud.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <collision name='shroud_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/shroud.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='shroud_joint' type='revolute'>
+        <parent>base_link</parent>
+        <child>shroud_link</child>
+        <pose>0 0 0 0 -0 0</pose>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>2</damping>
+            <friction>0.5</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='sun_link'>
+        <pose>0 0 0 0 -0 0</pose>
+        <velocity_decay>
+          <linear>0.2</linear>
+          <angular>0.5</angular>
+        </velocity_decay>
+        <inertial>
+          <pose>0 0 0.1 0 -0 0</pose>
+          <mass>15</mass>
+          <inertia>
+            <ixx>0.092</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.092</iyy>
+            <iyz>0</iyz>
+            <izz>0.027</izz>
+          </inertia>
+        </inertial>
+        <visual name='sun_visual'>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/middle_blade.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.2 0.4 0.8 1</ambient>
+            <diffuse>0.2 0.4 0.8 1</diffuse>
+          </material>
+        </visual>
+        <collision name='sun_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/middle_blade.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='sun_joint' type='revolute'>
+        <parent>base_link</parent>
+        <child>sun_link</child>
+        <pose>0 0 0 0 -0 0</pose>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>1.5</damping>
+            <friction>0.4</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='planet_1_carrier'>
+        <pose>0 0 0 0 -0 0</pose>
+        <velocity_decay>
+          <linear>0.2</linear>
+          <angular>0.8</angular>
+        </velocity_decay>
+        <inertial>
+          <mass>5</mass>
+          <inertia>
+            <ixx>0.0022</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.0022</iyy>
+            <iyz>0</iyz>
+            <izz>0.0023</izz>
+          </inertia>
+          <pose>0 0 0 0 -0 0</pose>
+        </inertial>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='planet_1_orbit_joint' type='revolute'>
+        <parent>base_link</parent>
+        <child>planet_1_carrier</child>
+        <pose>0 0 0 0 -0 0</pose>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>4</damping>
+            <friction>1</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='planet_1_link'>
+        <pose>0.155943 -0.456764 0 0 -0 0</pose>
+        <velocity_decay>
+          <linear>0.2</linear>
+          <angular>0.8</angular>
+        </velocity_decay>
+        <inertial>
+          <pose>0 0 0.1 0 -0 0</pose>
+          <mass>12</mass>
+          <inertia>
+            <ixx>0.069</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.069</iyy>
+            <iyz>0</iyz>
+            <izz>0.012</izz>
+          </inertia>
+        </inertial>
+        <visual name='planet_1_visual'>
+          <pose>-0.155943 0.456764 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/blade_1.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+        <collision name='planet_1_collision'>
+          <pose>-0.155943 0.456764 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/blade_1.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='planet_1_spin_joint' type='revolute'>
+        <parent>planet_1_carrier</parent>
+        <child>planet_1_link</child>
+        <pose>0 0 0 0 -0 0</pose>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>4</damping>
+            <friction>1</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='planet_2_carrier'>
+        <pose>0 0 0 0 -0 0</pose>
+        <velocity_decay>
+          <linear>0.2</linear>
+          <angular>0.8</angular>
+        </velocity_decay>
+        <inertial>
+          <mass>5</mass>
+          <inertia>
+            <ixx>0.0022</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.0022</iyy>
+            <iyz>0</iyz>
+            <izz>0.0023</izz>
+          </inertia>
+          <pose>0 0 0 0 -0 0</pose>
+        </inertial>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='planet_2_orbit_joint' type='revolute'>
+        <parent>base_link</parent>
+        <child>planet_2_carrier</child>
+        <pose>0 0 0 0 -0 0</pose>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>4</damping>
+            <friction>1</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='planet_2_link'>
+        <pose>-0.155847 0.456481 0 0 -0 0</pose>
+        <velocity_decay>
+          <linear>0.2</linear>
+          <angular>0.8</angular>
+        </velocity_decay>
+        <inertial>
+          <pose>0 0 0.1 0 -0 0</pose>
+          <mass>12</mass>
+          <inertia>
+            <ixx>0.069</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.069</iyy>
+            <iyz>0</iyz>
+            <izz>0.012</izz>
+          </inertia>
+        </inertial>
+        <visual name='planet_2_visual'>
+          <pose>0.155847 -0.456481 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/blade_2.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.2 0.8 0.2 1</ambient>
+            <diffuse>0.2 0.8 0.2 1</diffuse>
+          </material>
+        </visual>
+        <collision name='planet_2_collision'>
+          <pose>0.155847 -0.456481 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>/home/nithish/ur10e_force_control_ws/install/ur10e_simulation_pkg/share/ur10e_simulation_pkg/meshes/blade_2.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='planet_2_spin_joint' type='revolute'>
+        <parent>planet_2_carrier</parent>
+        <child>planet_2_link</child>
+        <pose>0 0 0 0 -0 0</pose>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>4</damping>
+            <friction>1</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <plugin name='mixer_joint_pose_trajectory' filename='libgazebo_ros_joint_pose_trajectory.so'>
+        <ros>
+          <namespace>/mixer</namespace>
+        </ros>
+        <update_rate>50</update_rate>
+      </plugin>
+      <pose>0 0 0 0 -0 0</pose>
+    </model>
+    <state world_name='default'>
+      <sim_time>237 402000000</sim_time>
+      <real_time>408 351744328</real_time>
+      <wall_time>1781792180 284454703</wall_time>
+      <iterations>237402</iterations>
+      <model name='ground_plane'>
+        <pose>0 0 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>0 0 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='planetary_mixer'>
+        <pose>-0 0 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='base_link'>
+          <pose>-0 0 0 0 -0 0</pose>
+          <velocity>-4e-06 -0 -0 -2e-06 1.9e-05 -2e-06</velocity>
+          <acceleration>0.00092 0.000866 -0.000368 -0.003547 0.038595 -0.004752</acceleration>
+          <wrench>0.165532 0.155942 -0.066209 0 -0 0</wrench>
+        </link>
+        <link name='planet_1_carrier'>
+          <pose>0 -0 -1e-06 0.000942 0.000321 -0.260431</pose>
+          <velocity>-5e-06 -1e-06 -0 -2e-06 2.2e-05 -0.000988</velocity>
+          <acceleration>-0.010481 -0.001041 -0.000371 -0.003747 0.04387 0.020432</acceleration>
+          <wrench>-0.052405 -0.005206 -0.001854 0 -0 0</wrench>
+        </link>
+        <link name='planet_1_link'>
+          <pose>0.033071 -0.481517 -0.000324 0.000923 0.000349 -0.293705</pose>
+          <velocity>-0.000483 -3.3e-05 0 -2e-06 2.2e-05 -0.001061</velocity>
+          <acceleration>-0.000372 -3.8e-05 2.8e-05 -0.003556 0.043553 0.020044</acceleration>
+          <wrench>-0.00447 -0.000459 0.000331 0 -0 0</wrench>
+        </link>
+        <link name='planet_2_carrier'>
+          <pose>-0 0 0 0.000281 9.6e-05 0.047178</pose>
+          <velocity>-5e-06 -1e-06 -0 -3e-06 2.2e-05 0.000191</velocity>
+          <acceleration>-0.01051 -0.001034 -0.000366 -0.006004 0.044024 -0.002805</acceleration>
+          <wrench>-0.05255 -0.005169 -0.001828 0 -0 0</wrench>
+        </link>
+        <link name='planet_2_link'>
+          <pose>-0.177201 0.448624 -0.000324 -0.000832 -0.000524 -0.185481</pose>
+          <velocity>-8.8e-05 -3.4e-05 0 -4e-06 1.8e-05 -0.00074</velocity>
+          <acceleration>-0.000221 0.000661 0.000133 -0.007935 0.03762 -0.001316</acceleration>
+          <wrench>-0.002648 0.007937 0.001593 0 -0 0</wrench>
+        </link>
+        <link name='shroud_link'>
+          <pose>0 0 -0 0 -0 0.000647</pose>
+          <velocity>-5e-06 -1e-06 -0 -3e-06 2.1e-05 6e-06</velocity>
+          <acceleration>-0.004136 -0.000178 -0.000368 -0.005776 0.042457 -0.002474</acceleration>
+          <wrench>-0.144751 -0.006232 -0.012897 0 -0 0</wrench>
+        </link>
+        <link name='sun_link'>
+          <pose>0 0 -0 0 -0 0.000646</pose>
+          <velocity>-5e-06 -1e-06 -0 -3e-06 2.1e-05 6e-06</velocity>
+          <acceleration>-0.006259 -0.000467 -0.000368 -0.005779 0.042459 -0.002474</acceleration>
+          <wrench>-0.093887 -0.007011 -0.005527 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='ur'>
+        <pose>1.3 -0 2.1 3.6e-05 1.2e-05 -0</pose>
+        <scale>1 1 1</scale>
+        <link name='base_link'>
+          <pose>1.3 -0 2.1 3.6e-05 1.2e-05 -0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>-0 0 0 0 -0 0</acceleration>
+          <wrench>-0 0 0 0 -0 0</wrench>
+        </link>
+        <link name='forearm_link'>
+          <pose>1.24085 -0.025604 2.89 -1.57099 -0.938293 0.409577</pose>
+          <velocity>-0.004215 -0.001735 -0.000482 0.007088 -0.016335 -0.001329</velocity>
+          <acceleration>0.132737 0.434927 -3.97216 -0.783786 1.34516 -2.63985</acceleration>
+          <wrench>0.529486 1.73492 -15.8449 0 -0 0</wrench>
+        </link>
+        <link name='shoulder_link'>
+          <pose>1.3 -6e-06 2.2807 8.3e-05 -3e-06 -2.73217</pose>
+          <velocity>-0 0 0 0 -0 -0.001331</velocity>
+          <acceleration>0.021834 0.039936 -2e-06 -0.005489 0.008774 -1.33066</acceleration>
+          <wrench>0.160896 0.294286 -1.8e-05 0 -0 0</wrench>
+        </link>
+        <link name='upper_arm_link'>
+          <pose>1.3 -6e-06 2.2807 -1.57183 1.4654 0.408395</pose>
+          <velocity>-0 -0 0 0.002977 -0.006861 -0.00133</velocity>
+          <acceleration>-1.40781 -0.575423 -0.183092 2.43041 1.00278 -2.09098</acceleration>
+          <wrench>-18.3733 -7.50984 -2.38954 0 -0 0</wrench>
+        </link>
+        <link name='wrist_1_link'>
+          <pose>0.861587 -0.000399 2.429 -1.57091 0.025134 0.409419</pose>
+          <velocity>0.003349 0.002036 -0.006499 0.012813 -0.029528 -0.001327</velocity>
+          <acceleration>2.82659 1.80875 -6.48396 1.03824 0.93416 1.84867</acceleration>
+          <wrench>5.93583 3.79838 -13.6163 0 -0 0</wrench>
+        </link>
+        <link name='wrist_2_link'>
+          <pose>0.864345 0.000813 2.54881 0.023057 0.010008 1.57519</pose>
+          <velocity>-0.000187 0.000497 -0.006402 0.012935 -0.029474 0.003971</velocity>
+          <acceleration>0.007555 0.510348 -6.93854 2.56052 -0.215878 2.53883</acceleration>
+          <wrench>0.014959 1.01049 -13.7383 0 -0 0</wrench>
+        </link>
+        <link name='wrist_3_link'>
+          <pose>0.747827 0.000328 2.55149 1.54774 0.003954 -1.56673</pose>
+          <velocity>-0.000264 -0 -0.009842 9.2e-05 -0.029528 0.004267</velocity>
+          <acceleration>-0.415341 0.063624 -9.39735 0.207211 1.18831 0.286667</acceleration>
+          <wrench>-0.49301 0.075522 -11.1547 0 -0 0</wrench>
+        </link>
+      </model>
+      <light name='sun'>
+        <pose>0 0 10 0 -0 0</pose>
+      </light>
+    </state>
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose>3.26364 -0.335129 2.88911 0 -0.014203 2.98021</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
   </world>
 </sdf>

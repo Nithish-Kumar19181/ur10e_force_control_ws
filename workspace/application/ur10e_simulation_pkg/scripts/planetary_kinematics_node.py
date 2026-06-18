@@ -62,7 +62,7 @@ class PlanetaryKinematicsNode(Node):
         self.create_subscription(JointState, "/mixer/joint_states_gui", self._gui_cb, 10)
         self.create_subscription(Float64, "/mixer/sun_joint_cmd", self._cmd_cb, 10)
 
-        # 50 Hz command loop
+        # 50 Hz command loop (plenty for smooth visualization).
         self.create_timer(0.02, self._timer_cb)
 
         self.get_logger().info("=" * 58)
@@ -110,17 +110,14 @@ class PlanetaryKinematicsNode(Node):
         # Single-point trajectory: libgazebo_ros_joint_pose_trajectory sets the
         # joints to these angles. Streaming at the timer rate gives smooth motion.
         traj = JointTrajectory()
-        traj.header.stamp = self.get_clock().now().to_msg()
-        # Reference link the plugin holds fixed while setting joints. Must be the
-        # SCOPED Gazebo name: the plugin resolves the model from this link via
-        # world->EntityByName(), and a bare "base_link" is ambiguous (the arm has
-        # one too) -> it would pick the arm and fail to find the mixer joints.
-        traj.header.frame_id = "planetary_mixer::base_link"
+        traj.header.frame_id = "world"
         traj.joint_names = JOINT_NAMES
         point = JointTrajectoryPoint()
         point.positions = [float(p) for p in positions]
+        # Small non-zero duration (0.1 s, longer than the publish period) gives the
+        # plugin a clean window to apply and interpolate toward the target.
         point.time_from_start.sec = 0
-        point.time_from_start.nanosec = 0
+        point.time_from_start.nanosec = 100_000_000  # 0.1 s
         traj.points = [point]
         self.gazebo_cmd_pub.publish(traj)
 
