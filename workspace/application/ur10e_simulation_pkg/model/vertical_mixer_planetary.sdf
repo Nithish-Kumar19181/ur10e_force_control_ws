@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
   <model name="planetary_mixer">
-    <static>true</static>
+    <static>false</static>
     <self_collide>false</self_collide>
     <allow_auto_disable>true</allow_auto_disable>
 
@@ -37,6 +37,11 @@
         </geometry>
       </collision>
     </link>
+
+    <joint name="world_fixed_joint" type="fixed">
+      <parent>world</parent>
+      <child>base_link</child>
+    </joint>
 
     <link name="shroud_link">
       <pose>0 0 0 0 0 0</pose>

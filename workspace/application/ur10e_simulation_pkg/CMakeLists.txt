@@ -72,6 +72,7 @@ install(
   PROGRAMS
     scripts/planetary_kinematics_node.py
     scripts/sun_joint_demo_trajectory.py
+    scripts/sun_joint_slider_gui.py
   DESTINATION lib/${PROJECT_NAME}
 )
 ament_target_dependencies(ur10e_circle_follow
