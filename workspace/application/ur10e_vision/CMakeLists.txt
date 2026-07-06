@@ -28,23 +28,37 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common filters segmentation)
 
 # ---------------------------------------------------------------------------
 # Node A: cloud_processor (C++ / PCL)
 # ---------------------------------------------------------------------------
 add_executable(cloud_processor src/cloud_processor.cpp)
+add_executable(waypoint_generator_node src/waypoint_generator.cpp)
+
 target_include_directories(cloud_processor PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   ${PCL_INCLUDE_DIRS})
 target_link_libraries(cloud_processor ${PCL_LIBRARIES})
+
 ament_target_dependencies(cloud_processor
   rclcpp sensor_msgs geometry_msgs std_srvs
   tf2 tf2_ros tf2_eigen tf2_sensor_msgs
   pcl_ros pcl_conversions)
 
+  target_include_directories(waypoint_generator_node PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${PCL_INCLUDE_DIRS})
+  target_link_libraries(waypoint_generator_node ${PCL_LIBRARIES})
+  ament_target_dependencies(waypoint_generator_node
+    rclcpp sensor_msgs geometry_msgs visualization_msgs
+    tf2 tf2_ros pcl_conversions)
+
 install(TARGETS cloud_processor
+  waypoint_generator_node
   DESTINATION lib/${PROJECT_NAME})
 
 # ---------------------------------------------------------------------------
