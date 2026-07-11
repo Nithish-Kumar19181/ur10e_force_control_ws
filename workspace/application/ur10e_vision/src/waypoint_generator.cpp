@@ -12,6 +12,7 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <std_msgs/msg/u_int32_multi_array.hpp>
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -73,6 +74,11 @@ public:
 
         marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
             "/ur10e_vision/path_markers", latchedQos());
+
+        pose_pub_ = create_publisher<geometry_msgs::msg::PoseArray>(
+            "/ur10e_vision/waypoints", latchedQos());
+        rows_pub_ = create_publisher<std_msgs::msg::UInt32MultiArray>(
+            "/ur10e_vision/waypoint_row_sizes", latchedQos());
 
         RCLCPP_INFO(get_logger(),
             "waypoint_generator up. tool_width=%.3f spacing=%.3f standoff=%.3f raster=%s",
@@ -152,6 +158,21 @@ private:
                       (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
     }
 
+    // Overshoot policy for a Catmull-Rom fill point between bracketing valid
+    // cells `a` and `b`. A cubic can ring past the surface on noisy real-sensor
+    // data, where linear never would.
+    static Vec3 constrainFill(const Vec3 & est, const Vec3 & a, const Vec3 & b)
+    {
+        // Clamp the cubic estimate component-wise into the bracketing anchors'
+        // bounding box so ringing can't push a filled point off the surface on
+        // noisy hardware. Costs the sub-mm bulge a cubic would add between
+        // anchors, which force compliance absorbs.
+        return Vec3(
+            std::clamp(est.x(), std::min(a.x(), b.x()), std::max(a.x(), b.x())),
+            std::clamp(est.y(), std::min(a.y(), b.y()), std::max(a.y(), b.y())),
+            std::clamp(est.z(), std::min(a.z(), b.z()), std::max(a.z(), b.z())));
+    }
+
     static bool fillLine(std::vector<OptVec3> & line)
     {
         std::vector<int> valid;
@@ -159,14 +180,22 @@ private:
             if (line[i]) valid.push_back(i);
         if (valid.empty()) return false;
 
-        // interior: linear interpolation between consecutive valid cells
+        // interior: Catmull-Rom (bicubic-per-axis) through the 4 nearest valid
+        // cells bracketing each gap; the stencil clamps to the segment ends, so
+        // the first/last gap degrades gracefully toward linear.
         for (size_t k = 0; k + 1 < valid.size(); ++k)
         {
             const int a = valid[k], b = valid[k + 1];
+            const int a0 = (k > 0)                ? valid[k - 1] : a;
+            const int b1 = (k + 2 < valid.size()) ? valid[k + 2] : b;
+            const Vec3 & P0 = *line[a0];
+            const Vec3 & P1 = *line[a];
+            const Vec3 & P2 = *line[b];
+            const Vec3 & P3 = *line[b1];
             for (int i = a + 1; i < b; ++i)
             {
                 const double t = static_cast<double>(i - a) / static_cast<double>(b - a);
-                line[i] = (1.0 - t) * (*line[a]) + t * (*line[b]);
+                line[i] = constrainFill(catmullRom(P0, P1, P2, P3, t), P1, P2);
             }
         }
 
@@ -194,24 +223,6 @@ private:
             if (!any_empty) continue;
             if (!fillLine(col)) continue;                 // column had no data either
             for (int r = 0; r < R; ++r) if (!g[r][c]) g[r][c] = col[r];
-        }
-    }
-
-    static void smoothFilled(std::vector<std::vector<OptVec3>> & g,
-                             const std::vector<std::vector<bool>> & measured)
-    {
-        const int R = static_cast<int>(g.size());
-        const int C = static_cast<int>(g[0].size());
-        for (int iter = 0; iter < 2; ++iter)
-        {
-            for (int r = 0; r < R; ++r)             // along rows
-                for (int c = 2; c < C - 2; ++c)
-                    if (!measured[r][c])
-                        g[r][c] = catmullRom(*g[r][c - 2], *g[r][c - 1], *g[r][c + 1], *g[r][c + 2], 0.5);
-            for (int c = 0; c < C; ++c)             // down columns
-                for (int r = 2; r < R - 2; ++r)
-                    if (!measured[r][c])
-                        g[r][c] = catmullRom(*g[r - 2][c], *g[r - 1][c], *g[r + 1][c], *g[r + 2][c], 0.5);
         }
     }
 
@@ -314,8 +325,6 @@ private:
 
         std::vector<std::vector<OptVec3>> grid(pass_px.size(),
                                                std::vector<OptVec3>(along_px_list.size()));
-        std::vector<std::vector<bool>> measured(pass_px.size(),
-                                                std::vector<bool>(along_px_list.size(), false));
         for (size_t r = 0; r < pass_px.size(); ++r)
         {
             for (size_t c = 0; c < along_px_list.size(); ++c)
@@ -323,16 +332,15 @@ private:
                 const int u = vertical ? pass_px[r] : along_px_list[c];
                 const int v = vertical ? along_px_list[c] : pass_px[r];
                 grid[r][c] = pixel(cloud, u, v);
-                measured[r][c] = grid[r][c].has_value();
             }
         }
         fillGrid(grid);
-        smoothFilled(grid, measured);
 
         const OptVec3 cam = cameraOrigin();
 
         // Emit serpentine passes; skip only the trimmed (off-surface) ends.
         std::vector<Vec3> positions, normals;
+        std::vector<uint32_t> row_sizes;   // waypoints emitted per raster pass
         bool serpentine = false;
         for (size_t r = 0; r < grid.size(); ++r)
         {
@@ -341,6 +349,7 @@ private:
             if (serpentine) std::reverse(cols.begin(), cols.end());
             serpentine = !serpentine;
 
+            const size_t before = positions.size();
             for (int c : cols)
             {
                 if (!grid[r][c]) continue;
@@ -351,6 +360,7 @@ private:
                 positions.push_back(pos);
                 normals.push_back(*n);
             }
+            row_sizes.push_back(static_cast<uint32_t>(positions.size() - before));
         }
 
         if (positions.size() < 2)
@@ -360,7 +370,7 @@ private:
             return;
         }
 
-        publish(positions, normals, msg->header.stamp);
+        publish(positions, normals, row_sizes, msg->header.stamp);
         RCLCPP_INFO(get_logger(),
             "Generated %zu waypoints (pitch=%dpx/%.3fm along=%dpx/%.3fm, gaps bridged).",
             positions.size(), pitch_px, tool_width_, along_px, waypoint_space_);
@@ -368,6 +378,7 @@ private:
 
     void publish(const std::vector<Vec3> & positions,
                  const std::vector<Vec3> & normals,
+                 const std::vector<uint32_t> & row_sizes,
                  const builtin_interfaces::msg::Time & stamp)
     {
         geometry_msgs::msg::PoseArray pa;
@@ -390,8 +401,14 @@ private:
                 t = z.cross(Vec3::UnitX());
                 if (t.norm() < 1e-6) t = z.cross(Vec3::UnitY());
             }
-            const Vec3 x = t.normalized();
-            const Vec3 y = z.cross(x);
+            Vec3 x = t.normalized();
+            Vec3 y = z.cross(x);
+
+            if (std::abs(z.z()) < 0.98 && y.z() < 0.0)
+            {
+                x = -x;      // 180° roll about the approach axis (z)
+                y = -y;
+            }
 
             Eigen::Matrix3d R;
             R.col(0) = x; R.col(1) = y; R.col(2) = z;
@@ -424,6 +441,12 @@ private:
 
         if (!transforms.empty()) static_bcast_->sendTransform(transforms);
         marker_pub_->publish(buildMarkers(pa, normals, stamp));
+
+        pose_pub_->publish(pa);
+
+        std_msgs::msg::UInt32MultiArray rows;
+        rows.data = row_sizes;
+        rows_pub_->publish(rows);
     }
 
     visualization_msgs::msg::MarkerArray buildMarkers(
@@ -478,6 +501,8 @@ private:
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_sub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr pose_pub_;
+    rclcpp::Publisher<std_msgs::msg::UInt32MultiArray>::SharedPtr rows_pub_;
 
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

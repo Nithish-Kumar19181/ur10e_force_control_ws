@@ -16,9 +16,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -29,6 +27,7 @@ find_package(tf2_sensor_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common filters segmentation)
 
 # ---------------------------------------------------------------------------
@@ -54,18 +53,11 @@ ament_target_dependencies(cloud_processor
     ${PCL_INCLUDE_DIRS})
   target_link_libraries(waypoint_generator_node ${PCL_LIBRARIES})
   ament_target_dependencies(waypoint_generator_node
-    rclcpp sensor_msgs geometry_msgs visualization_msgs
+    rclcpp sensor_msgs geometry_msgs visualization_msgs std_msgs
     tf2 tf2_ros pcl_conversions)
 
 install(TARGETS cloud_processor
   waypoint_generator_node
-  DESTINATION lib/${PROJECT_NAME})
-
-# ---------------------------------------------------------------------------
-# Node B: path_generator (Python / Open3D)
-# ---------------------------------------------------------------------------
-install(PROGRAMS
-  scripts/path_generator.py
   DESTINATION lib/${PROJECT_NAME})
 
 # ---------------------------------------------------------------------------

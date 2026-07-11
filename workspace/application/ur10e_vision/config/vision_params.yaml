@@ -25,12 +25,12 @@ waypoint_generator:
     raster_direction: "horizontal"  # horizontal passes, stepping vertically
     tool_width: 0.05                # m, pass-to-pass pitch (vertical step)
     waypoint_spacing: 0.04          # m, along-pass spacing
-    standoff: 0.07                   # m, offset along +normal (away from surface)
+    standoff: 0.04                  # m, offset along +normal (away from surface)
 
-    raster_length: 0.70
+    raster_length: 0.60
     raster_height: 0.55
 
-    raster_center_x: 0.0
+    raster_center_x: 0.025
     raster_center_y: 0.2
 
     approach_axis_sign: -1.0
