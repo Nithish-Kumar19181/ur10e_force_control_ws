@@ -26,13 +26,9 @@
   <depend>libpcl-all-dev</depend>
   <depend>eigen</depend>
 
-  <!-- Node B: path_generator (Python / Open3D) -->
-  <depend>rclpy</depend>
+  <!-- Node B: waypoint_generator (C++) -->
   <depend>visualization_msgs</depend>
-  <depend>ament_index_python</depend>
-  <exec_depend>python3-numpy</exec_depend>
-  <exec_depend>tf_transformations</exec_depend>
-  <!-- Open3D is required at runtime; install python3-open3d on Ubuntu 22.04 / Humble. -->
+  <depend>std_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -44,8 +44,8 @@ def generate_launch_description():
         ),
         Node(
             package="ur10e_vision",
-            executable="path_generator.py",
-            name="path_generator",
+            executable="waypoint_generator_node",
+            name="waypoint_generator",
             output="screen",
             parameters=[params_file, {"use_sim_time": True}],
         ),

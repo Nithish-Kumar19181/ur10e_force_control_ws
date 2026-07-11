@@ -24,6 +24,10 @@
   <depend>trajectory_msgs</depend>
   <depend>behaviortree_cpp_v3</depend>
   <depend>std_srvs</depend>
+  <depend>tf2_ros</depend>
+  <depend>moveit_msgs</depend>
+  <depend>shape_msgs</depend>
+  <depend>geometric_shapes</depend>
 
   <build_depend>gazebo_dev</build_depend>
   <build_depend>gazebo</build_depend>

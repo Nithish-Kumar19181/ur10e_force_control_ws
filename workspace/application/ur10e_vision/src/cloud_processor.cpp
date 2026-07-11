@@ -1,20 +1,12 @@
-// cloud_processor.cpp
-//
-// Node A of the ur10e_vision cleaning-path pipeline.
-//
-// Takes a single organized RGB-D point cloud snapshot from the simulated D435i,
-// crops it to a central ROI (75% of image area by default), filters it, keeps
-// only the NEAREST connected surface cluster, transforms it into base_link and
-// republishes it (latched) for the Python path_generator.
-//
-// The cloud is kept ORGANIZED throughout: rejected points are set to NaN rather
-// than deleted, so the downstream node can address the surface by pixel and do
-// its "projected 2D grid + raycast" raster as a simple organized lookup.
-
+#include <chrono>
+#include <functional>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
+
+#include <Eigen/Core>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -29,9 +21,6 @@
 #include <pcl/point_cloud.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/passthrough.h>
-#include <pcl/filters/statistical_outlier_removal.h>
-#include <pcl/segmentation/extract_clusters.h>
-#include <pcl/search/kdtree.h>
 #include <pcl_conversions/pcl_conversions.h>
 
 using PointT = pcl::PointXYZ;
@@ -39,16 +28,9 @@ using CloudT = pcl::PointCloud<PointT>;
 
 namespace
 {
-constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
-
 inline bool isValid(const PointT & p)
 {
   return std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z);
-}
-
-inline void invalidate(PointT & p)
-{
-  p.x = p.y = p.z = kNaN;
 }
 }  // namespace
 
@@ -61,14 +43,10 @@ public:
     input_topic_ = declare_parameter<std::string>("input_cloud_topic", "/camera/camera/points");
     output_frame_ = declare_parameter<std::string>("output_frame", "base_link");
     capture_on_start_ = declare_parameter<bool>("capture_on_start", false);
-    crop_area_fraction_ = declare_parameter<double>("crop_area_fraction", 0.75);
     depth_min_ = declare_parameter<double>("depth_min", 0.15);
-    depth_max_ = declare_parameter<double>("depth_max", 3.0);
-    sor_mean_k_ = declare_parameter<int>("sor_mean_k", 30);
-    sor_stddev_mul_ = declare_parameter<double>("sor_stddev_mul", 1.0);
-    cluster_tolerance_ = declare_parameter<double>("cluster_tolerance", 0.02);
-    min_cluster_size_ = declare_parameter<int>("min_cluster_size", 200);
-    max_cluster_size_ = declare_parameter<int>("max_cluster_size", 1000000);
+    depth_max_ = declare_parameter<double>("depth_max", 4.0);
+    max_fill_gap_px_ = declare_parameter<int>("max_fill_gap_px", 120);
+    republish_rate_hz_ = declare_parameter<double>("republish_rate_hz", 2.0);
     tf_timeout_ = declare_parameter<double>("tf_timeout", 1.0);
 
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
@@ -91,10 +69,16 @@ public:
       std::bind(&CloudProcessor::triggerCb, this,
         std::placeholders::_1, std::placeholders::_2));
 
+    // Re-stream the last computed cloud; filling only ever runs in process().
+    if (republish_rate_hz_ > 0.0) {
+      republish_timer_ = create_wall_timer(
+        std::chrono::duration<double>(1.0 / republish_rate_hz_),
+        std::bind(&CloudProcessor::republishCb, this));
+    }
+
     RCLCPP_INFO(get_logger(),
-      "cloud_processor up. input=%s output_frame=%s crop_area=%.2f "
-      "depth=[%.2f, %.2f] %s",
-      input_topic_.c_str(), output_frame_.c_str(), crop_area_fraction_,
+      "cloud_processor up. input=%s output_frame=%s depth=[%.2f, %.2f] %s",
+      input_topic_.c_str(), output_frame_.c_str(),
       depth_min_, depth_max_,
       capture_on_start_ ? "(auto-capture first frame)" : "(waiting for /ur10e_vision/trigger)");
   }
@@ -144,22 +128,11 @@ private:
     const uint32_t W = cloud->width;
     const uint32_t H = cloud->height;
 
-    // --- 1. Central crop (75% of area => linear fraction sqrt(area_fraction)).
-    const double lin = std::sqrt(std::clamp(crop_area_fraction_, 0.0, 1.0));
-    const uint32_t roi_w = static_cast<uint32_t>(std::round(W * lin));
-    const uint32_t roi_h = static_cast<uint32_t>(std::round(H * lin));
-    const uint32_t x0 = (W - roi_w) / 2;
-    const uint32_t y0 = (H - roi_h) / 2;
-    const uint32_t x1 = x0 + roi_w;
-    const uint32_t y1 = y0 + roi_h;
-
-    for (uint32_t v = 0; v < H; ++v) {
-      for (uint32_t u = 0; u < W; ++u) {
-        if (u < x0 || u >= x1 || v < y0 || v >= y1) {
-          invalidate(cloud->at(u, v));
-        }
-      }
-    }
+    // --- 1. No cropping: ROI is the whole frame (raster window is set downstream).
+    const uint32_t x0 = 0;
+    const uint32_t y0 = 0;
+    const uint32_t roi_w = W;
+    const uint32_t roi_h = H;
 
     // --- 2. Depth-band passthrough (camera optical Z), keep organized.
     {
@@ -171,82 +144,24 @@ private:
       pt.filter(*cloud);
     }
 
-    // --- 3. Statistical outlier removal, keep organized.
-    {
-      pcl::StatisticalOutlierRemoval<PointT> sor;
-      sor.setKeepOrganized(true);
-      sor.setInputCloud(cloud);
-      sor.setMeanK(sor_mean_k_);
-      sor.setStddevMulThresh(sor_stddev_mul_);
-      sor.filter(*cloud);
-    }
+    // --- 3. Interior hole filling (bilinear, gap-capped).
+    const size_t filled = fillHoles(*cloud);
 
-    // --- 4. Euclidean clustering -> keep NEAREST large cluster.
-    auto valid = std::make_shared<std::vector<int>>();
-    valid->reserve(cloud->size());
-    for (size_t i = 0; i < cloud->size(); ++i) {
-      if (isValid(cloud->points[i])) {
-        valid->push_back(static_cast<int>(i));
-      }
+    size_t valid_count = 0;
+    for (const auto & p : cloud->points) {
+      if (isValid(p)) ++valid_count;
     }
-    if (valid->size() < static_cast<size_t>(min_cluster_size_)) {
-      RCLCPP_WARN(get_logger(),
-        "Only %zu valid points after filtering (< min_cluster_size=%d).",
-        valid->size(), min_cluster_size_);
+    if (valid_count == 0) {
+      RCLCPP_WARN(get_logger(), "No valid points after depth filtering.");
       return false;
-    }
-
-    auto tree = std::make_shared<pcl::search::KdTree<PointT>>();
-    tree->setInputCloud(cloud, valid);
-
-    std::vector<pcl::PointIndices> clusters;
-    pcl::EuclideanClusterExtraction<PointT> ec;
-    ec.setClusterTolerance(cluster_tolerance_);
-    ec.setMinClusterSize(min_cluster_size_);
-    ec.setMaxClusterSize(max_cluster_size_);
-    ec.setSearchMethod(tree);
-    ec.setInputCloud(cloud);
-    ec.setIndices(valid);
-    ec.extract(clusters);
-
-    if (clusters.empty()) {
-      RCLCPP_WARN(get_logger(), "No clusters found in ROI.");
-      return false;
-    }
-
-    // Nearest cluster = smallest mean optical-Z (closest to camera).
-    int best = -1;
-    double best_z = std::numeric_limits<double>::max();
-    for (size_t c = 0; c < clusters.size(); ++c) {
-      double sz = 0.0;
-      for (int idx : clusters[c].indices) {
-        sz += cloud->points[idx].z;
-      }
-      const double mean_z = sz / clusters[c].indices.size();
-      if (mean_z < best_z) {
-        best_z = mean_z;
-        best = static_cast<int>(c);
-      }
-    }
-
-    std::vector<bool> keep(cloud->size(), false);
-    for (int idx : clusters[best].indices) {
-      keep[idx] = true;
-    }
-    for (size_t i = 0; i < cloud->size(); ++i) {
-      if (!keep[i]) {
-        invalidate(cloud->points[i]);
-      }
     }
     RCLCPP_INFO(get_logger(),
-      "Kept nearest cluster: %zu pts, mean depth %.3f m (of %zu clusters).",
-      clusters[best].indices.size(), best_z, clusters.size());
+      "Hole fill: patched %zu interior cells (%zu valid points total).",
+      filled, valid_count);
 
-    // --- 5. Transform organized cloud into output_frame (NaNs preserved).
-    // The Gazebo organized depth cloud is often stamped a second or two behind
-    // the TF stream, so an exact-stamp lookup extrapolates into the past. For a
-    // static snapshot (arm posed, then triggered) the latest transform is the
-    // correct one; fall back to it when the exact stamp is unavailable.
+    // --- 4. Transform into output_frame (NaNs preserved). The Gazebo cloud lags
+    // the TF stream, so fall back to the latest transform if the exact stamp is
+    // unavailable -- correct for a static snapshot.
     geometry_msgs::msg::TransformStamped tf;
     try {
       tf = tf_buffer_->lookupTransform(
@@ -274,20 +189,19 @@ private:
     out->height = cloud->height;
     out->is_dense = false;
 
-    // --- 6. Publish (latched).
-    sensor_msgs::msg::PointCloud2 out_msg;
-    pcl::toROSMsg(*out, out_msg);
-    out_msg.header.frame_id = output_frame_;
-    out_msg.header.stamp = msg->header.stamp;
-    cloud_pub_->publish(out_msg);
+    // --- 5. Store the snapshot and publish once; the timer re-streams it.
+    pcl::toROSMsg(*out, last_cloud_msg_);
+    last_cloud_msg_.header.frame_id = output_frame_;
+    last_cloud_msg_.header.stamp = msg->header.stamp;
 
-    sensor_msgs::msg::RegionOfInterest roi;
-    roi.x_offset = x0;
-    roi.y_offset = y0;
-    roi.width = roi_w;
-    roi.height = roi_h;
-    roi.do_rectify = false;
-    roi_pub_->publish(roi);
+    last_roi_.x_offset = x0;
+    last_roi_.y_offset = y0;
+    last_roi_.width = roi_w;
+    last_roi_.height = roi_h;
+    last_roi_.do_rectify = false;
+
+    have_output_ = true;
+    publishOutputs();
 
     RCLCPP_INFO(get_logger(),
       "Published surface_cloud (%ux%u organized) in %s; ROI [%u,%u %ux%u].",
@@ -295,29 +209,123 @@ private:
     return true;
   }
 
+  void publishOutputs()
+  {
+    if (!have_output_) return;
+    cloud_pub_->publish(last_cloud_msg_);
+    roi_pub_->publish(last_roi_);
+  }
+
+  void republishCb()
+  {
+    publishOutputs();
+  }
+
+  // Blend the row (h) and column (v) estimates for one hole cell; nullopt = leave NaN.
+  static std::optional<Eigen::Vector3f> reconcile(
+    bool h_valid, const Eigen::Vector3f & h_est,
+    bool v_valid, const Eigen::Vector3f & v_est)
+  {
+    if (h_valid && v_valid) return Eigen::Vector3f(0.5f * (h_est + v_est));
+    if (h_valid) return h_est;
+    if (v_valid) return v_est;
+    return std::nullopt;
+  }
+
+  // Interior, gap-capped, bilinear hole fill. Row and column passes each read only
+  // originally-valid cells (so fills never cascade); reconcile() blends the two.
+  size_t fillHoles(CloudT & cloud) const
+  {
+    const int W = static_cast<int>(cloud.width);
+    const int H = static_cast<int>(cloud.height);
+    const int cap = max_fill_gap_px_;
+
+    std::vector<bool> h_has(cloud.size(), false), v_has(cloud.size(), false);
+    std::vector<Eigen::Vector3f> h_est(cloud.size()), v_est(cloud.size());
+
+    // Linearly interpolate the open interval between valid endpoints a and b.
+    auto interpRun = [&](int a_idx, int b_idx, int span,
+                         const std::function<int(int)> & idx_at,
+                         std::vector<Eigen::Vector3f> & est,
+                         std::vector<bool> & has) {
+      const Eigen::Vector3f pa = cloud.points[a_idx].getVector3fMap();
+      const Eigen::Vector3f pb = cloud.points[b_idx].getVector3fMap();
+      for (int k = 1; k < span; ++k) {
+        const float t = static_cast<float>(k) / static_cast<float>(span);
+        const int cur = idx_at(k);
+        est[cur] = (1.0f - t) * pa + t * pb;
+        has[cur] = true;
+      }
+    };
+
+    // Row pass: scan each row, bridge bracketed gaps <= cap.
+    for (int v = 0; v < H; ++v) {
+      int last = -1;
+      for (int u = 0; u < W; ++u) {
+        const int idx = v * W + u;
+        if (!isValid(cloud.points[idx])) continue;
+        const int span = u - last;
+        if (last >= 0 && span - 1 > 0 && span - 1 <= cap) {
+          interpRun(v * W + last, idx, span,
+                    [&](int k) { return v * W + (last + k); }, h_est, h_has);
+        }
+        last = u;
+      }
+    }
+
+    // Column pass: scan each column, bridge bracketed gaps <= cap.
+    for (int u = 0; u < W; ++u) {
+      int last = -1;
+      for (int v = 0; v < H; ++v) {
+        const int idx = v * W + u;
+        if (!isValid(cloud.points[idx])) continue;
+        const int span = v - last;
+        if (last >= 0 && span - 1 > 0 && span - 1 <= cap) {
+          interpRun(last * W + u, idx, span,
+                    [&](int k) { return (last + k) * W + u; }, v_est, v_has);
+        }
+        last = v;
+      }
+    }
+
+    // Reconcile the two estimates and write patched points back into the cloud.
+    size_t filled = 0;
+    for (size_t i = 0; i < cloud.size(); ++i) {
+      if (isValid(cloud.points[i])) continue;
+      const auto blended = reconcile(h_has[i], h_est[i], v_has[i], v_est[i]);
+      if (blended) {
+        cloud.points[i].x = blended->x();
+        cloud.points[i].y = blended->y();
+        cloud.points[i].z = blended->z();
+        ++filled;
+      }
+    }
+    return filled;
+  }
+
   // params
   std::string input_topic_;
   std::string output_frame_;
   bool capture_on_start_{false};
-  double crop_area_fraction_{0.75};
   double depth_min_{0.15};
-  double depth_max_{3.0};
-  int sor_mean_k_{30};
-  double sor_stddev_mul_{1.0};
-  double cluster_tolerance_{0.02};
-  int min_cluster_size_{200};
-  int max_cluster_size_{1000000};
+  double depth_max_{4.0};
+  int max_fill_gap_px_{120};
+  double republish_rate_hz_{2.0};
   double tf_timeout_{1.0};
 
   // state
   bool captured_{false};
   sensor_msgs::msg::PointCloud2::ConstSharedPtr last_msg_;
+  sensor_msgs::msg::PointCloud2 last_cloud_msg_;   // last computed surface cloud
+  sensor_msgs::msg::RegionOfInterest last_roi_;    // ROI paired with it
+  bool have_output_{false};                        // a snapshot exists to republish
 
   // ros
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
   rclcpp::Publisher<sensor_msgs::msg::RegionOfInterest>::SharedPtr roi_pub_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr trigger_srv_;
+  rclcpp::TimerBase::SharedPtr republish_timer_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 };

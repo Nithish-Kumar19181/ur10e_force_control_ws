@@ -21,10 +21,15 @@ find_package(control_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(behaviortree_cpp_v3 REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(moveit_msgs REQUIRED)
+find_package(shape_msgs REQUIRED)
+find_package(geometric_shapes REQUIRED)
 
 add_executable(ur10e_circle_follow src/ur10e_circle_follow.cpp)
 add_executable(ur10e_retract src/ur10e_retract.cpp)
 add_executable(ur10e_reverse_circle src/ur10e_reverse_circle.cpp)
+add_executable(mixer_collision_publisher src/mixer_collision_publisher.cpp)
 
 install(
   DIRECTORY launch/
@@ -113,10 +118,21 @@ ament_target_dependencies(ur10e_reverse_circle
   orocos_kdl
 )
 
+ament_target_dependencies(mixer_collision_publisher
+  rclcpp
+  geometry_msgs
+  moveit_msgs
+  shape_msgs
+  geometric_shapes
+  tf2
+  tf2_ros
+)
+
 install(TARGETS
   ur10e_circle_follow
   ur10e_retract
   ur10e_reverse_circle
+  mixer_collision_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 

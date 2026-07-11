@@ -59,7 +59,7 @@ def generate_launch_description():
             # Use the custom SRDF that disables end_effector_link / ft_frame collisions
             "moveit_config_package": "ur10e_simulation_pkg",
             "moveit_config_file": "ur10e.srdf.xacro",
-            "spawn_x": "1.3",
+            "spawn_x": "1.55",
             "spawn_y": "0.0",
             "spawn_z": "2.1",
             "spawn_roll": "0.0",
@@ -111,7 +111,7 @@ def generate_launch_description():
         executable='static_transform_publisher',
         name='world_to_mixer_world',
         arguments=[
-            '--x', '-1.2', '--y', '0.0', '--z', '-2.1',
+            '--x', '-1.55', '--y', '0.0', '--z', '-2.1',
             '--yaw', '0.0', '--pitch', '0.0', '--roll', '0.0',
             '--frame-id', 'world', '--child-frame-id', 'mixer_world',
         ],
@@ -168,6 +168,21 @@ def generate_launch_description():
         )],
     )
 
+    mixer_collision_node = TimerAction(
+        period=10.0,
+        actions=[Node(
+            package='ur10e_simulation_pkg',
+            executable='mixer_collision_publisher',
+            name='mixer_collision_publisher',
+            output='screen',
+            parameters=[
+                {'use_sim_time': True},
+                {'planning_frame': 'world'},
+                {'update_rate_hz': 15.0},
+            ],
+        )],
+    )
+
     filtered_force_node = Node(
         package="ur10e_testing_pkg",
         executable="ur10e_force_filter",
@@ -216,6 +231,6 @@ def generate_launch_description():
         world_to_mixer_tf,
         planetary_state_publisher,
         kinematics_node,
-        # demo_motion_node,
+        mixer_collision_node,
 
     ])
